@@ -5,8 +5,8 @@ name: Admin dashboard
 # real backend started in the job (PostgreSQL service + uvicorn), seeded with
 # `python -m app.cli seed-demo` in APP_ENV=development (creates a demo admin).
 #
-# Expected layout (owned by the dashboard team): admin-dashboard/package.json with
-# scripts "test" (unit) and "test:e2e" (Playwright), tests under admin-dashboard/tests.
+# Layout: admin-dashboard/tests/package.json with scripts "test" (module check + unit) and
+# "test:e2e" (Playwright); the SPA itself lives in backend/app/static/admin.
 # The e2e tests read BASE_URL, ADMIN_IDENTIFIER and ADMIN_PASSWORD from the environment.
 
 on:
@@ -58,7 +58,7 @@ jobs:
       LOG_JSON: "false"
       SERVE_ADMIN_DASHBOARD: "true"
       # Demo admin created by `seed-demo`; the CLI prints/uses these in development only.
-      SEED_ADMIN_IDENTIFIER: admin@example.local
+      SEED_ADMIN_IDENTIFIER: e2e.admin@example.co.za
       SEED_ADMIN_PASSWORD: DemoAdmin-Passw0rd!
     steps:
       - uses: actions/checkout@v4
@@ -95,22 +95,22 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: admin-dashboard/package-lock.json
+          cache-dependency-path: admin-dashboard/tests/package-lock.json
 
       - name: Install dashboard test dependencies
-        working-directory: admin-dashboard
+        working-directory: admin-dashboard/tests
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npx playwright install --with-deps chromium
 
       - name: Unit tests
-        working-directory: admin-dashboard
+        working-directory: admin-dashboard/tests
         run: npm test --if-present
 
       - name: Playwright e2e
-        working-directory: admin-dashboard
+        working-directory: admin-dashboard/tests
         env:
-          BASE_URL: http://127.0.0.1:8000
+          BASE_URL: http://127.0.0.1:8000/admin/
           ADMIN_IDENTIFIER: ${{ env.SEED_ADMIN_IDENTIFIER }}
           ADMIN_PASSWORD: ${{ env.SEED_ADMIN_PASSWORD }}
           CI: "true"
@@ -122,7 +122,8 @@ jobs:
         with:
           name: dashboard-e2e-report
           path: |
-            admin-dashboard/playwright-report/
+            admin-dashboard/tests/playwright-report/
+            admin-dashboard/tests/test-results/
             admin-dashboard/test-results/
             uvicorn.log
           if-no-files-found: ignore
