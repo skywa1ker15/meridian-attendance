@@ -56,6 +56,8 @@ jobs:
   debug:
     name: Unit tests, lint, debug APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # publish the debug-latest pre-release
     timeout-minutes: 45
     env:
       # Optional repository variable (Settings → Secrets and variables → Actions → Variables):
@@ -95,6 +97,24 @@ jobs:
           name: meridian-attendance-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # Publishes the latest main-branch debug build as a direct .apk download on the
+      # repository's Releases page ("debug-latest", a pre-release that is replaced each time),
+      # so testers can install it from a phone without unzipping a workflow artifact.
+      - name: Publish debug APK to the debug-latest pre-release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          src=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          apk="meridian-attendance-debug.apk"
+          cp "$src" "$apk"
+          notes="Debug build of ${GITHUB_SHA::7} ($(date -u +%Y-%m-%dT%H:%MZ)). For testing only - not for employees.
+          Backend address built in: ${MERIDIAN_DEBUG_API_BASE_URL:-http://10.0.2.2:8000 (emulator only)}"
+          gh release delete debug-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create debug-latest "$apk" --prerelease --target "$GITHUB_SHA" \
+            --title "Debug build (latest)" --notes "$notes"
 
       - name: Unit tests
         run: ./gradlew testDebugUnitTest --stacktrace

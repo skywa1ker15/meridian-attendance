@@ -26,7 +26,7 @@ class ApiCallerTest {
 
     @Test
     fun emptyBodyMapsToUnit() = runTest {
-        val r = caller.call<Unit> { Response.success(204, null) }
+        val r = caller.call<Unit> { Response.success<Unit>(204, null) }
         assertIs<ApiResult.Success<Unit>>(r)
     }
 
