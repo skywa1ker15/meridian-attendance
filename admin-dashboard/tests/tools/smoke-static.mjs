@@ -8,7 +8,7 @@ import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
-process.env.PLAYWRIGHT_BROWSERS_PATH ||= '/opt/pw-browsers';
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH && (await import('node:fs')).existsSync('/opt/pw-browsers')) process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/pw-browsers';
 const STATIC = join(dirname(fileURLToPath(import.meta.url)), '../../../backend/app/static');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const server = http.createServer(async (req, res) => {

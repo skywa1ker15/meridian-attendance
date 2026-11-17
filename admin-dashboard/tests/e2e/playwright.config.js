@@ -1,8 +1,11 @@
 // Playwright configuration for the admin dashboard end-to-end tests.
 // Runs against a live backend; see README.md.
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
-process.env.PLAYWRIGHT_BROWSERS_PATH ||= '/opt/pw-browsers';
+// Use a pre-installed browser cache only where one exists (the authoring sandbox); CI and
+// developer machines use Playwright's default cache filled by `npx playwright install`.
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH && existsSync('/opt/pw-browsers')) process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/pw-browsers';
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:8000/admin/';
 
 export default defineConfig({
