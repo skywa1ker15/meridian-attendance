@@ -110,7 +110,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _limit_for(self, path: str) -> tuple[str, int]:
         s = self.settings
-        if path.endswith("/auth/login"):
+        if path.endswith("/auth/login") or path.startswith("/api/v1/setup/"):
             return "login", s.rate_limit_login_per_minute
         if path.endswith("/auth/password/forgot") or path.endswith("/auth/password/reset"):
             return "forgot", s.rate_limit_forgot_per_minute

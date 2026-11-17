@@ -68,6 +68,21 @@ Detection is **never** attendance. Only `confirmed` events change a session.
 
 ---
 
+## 0. First-run setup (no authentication)
+
+Lets the Android app create the very first administrator on an empty installation, so the system can be set up from a phone without server access.
+
+`GET /setup/status` → `200 {"needs_first_admin": true, "setup_code_required": true}`
+`needs_first_admin` is true while no `admin`/`superadmin` exists (employees do not count).
+
+`POST /setup/first-admin` → `201` same body as `POST /auth/login` (the new superadmin is signed in; `device` registers the phone)
+```json
+{ "setup_code": "from the server's FIRST_ADMIN_SETUP_CODE", "employee_number": "MG-0001",
+  "first_name": "Nomsa", "last_name": "Dlamini", "email": "nomsa.d@meridiangroup.co.za",
+  "password": "…", "device": { …as login… } }
+```
+Errors: `409 setup_complete` (an admin already exists — permanently closed), `403 setup_disabled` (staging/production server without `FIRST_ADMIN_SETUP_CODE`), `403 invalid_setup_code`, `409 conflict` (email/number taken), `422 validation_error` (password policy). Shares the login rate limit; audit-logged.
+
 ## 1. Authentication
 
 ### POST `/auth/login`

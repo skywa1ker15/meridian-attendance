@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     login_lockout_minutes: int = 15
     temporary_password_length: int = 12
     metrics_token: str | None = None
+    # One-time code that lets the Android app create the FIRST administrator on an empty system
+    # (POST /api/v1/setup/first-admin). Required in staging/production; once any admin exists the
+    # endpoint is permanently closed regardless of this value. Remove it after setup.
+    first_admin_setup_code: str | None = None
     idempotency_ttl_hours: int = 24
 
     # --- rate limiting (requests per minute per client IP) --------------------
