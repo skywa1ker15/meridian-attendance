@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash icon: same placeholder monogram, sized for the 240dp splash icon area (inner 160dp visible). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M40,68 L40,40 L46.5,40 L54,52.5 L61.5,40 L68,40 L68,68 L62.5,68 L62.5,49.5 L55.5,60.5 L52.5,60.5 L45.5,49.5 L45.5,68 Z" />
+</vector>

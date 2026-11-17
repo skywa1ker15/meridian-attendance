@@ -1,0 +1,22 @@
+# Gradle / build outputs
+.gradle/
+build/
+*/build/
+.kotlin/
+local.properties
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+# IDE
+.idea/
+*.iml
+.DS_Store
+# Secrets — never commit
+app/google-services.json
+*.jks
+*.keystore
+keystore.properties
+# Misc
+*.log

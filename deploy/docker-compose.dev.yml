@@ -1,0 +1,61 @@
+# Meridian Attendance — LOCAL DEVELOPMENT compose file
+#
+#   cp deploy/env/development.env.example deploy/env/development.env
+#   docker compose -f deploy/docker-compose.dev.yml up --build
+#
+# * db   : PostgreSQL 16 published on 127.0.0.1:5432 (so you can also run the API
+#          outside Docker with `uvicorn app.main:app --reload`)
+# * api  : backend with auto-reload, source mounted from ../backend, listening on
+#          0.0.0.0:8000 and PUBLISHED ON ALL HOST INTERFACES so that a phone on the
+#          same Wi-Fi (http://<your-LAN-IP>:8000) or the emulator (http://10.0.2.2:8000)
+#          can reach it. Do not use this file on a server.
+#
+# Development credentials in this file are deliberately weak and are refused by the
+# backend when APP_ENV is staging or production (backend/app/core/config.py).
+
+name: meridian-attendance-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: meridian_attendance
+      POSTGRES_USER: meridian
+      POSTGRES_PASSWORD: meridian_dev
+      TZ: UTC
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meridian -d meridian_attendance"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./env/development.env
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://meridian:meridian_dev@db:5432/meridian_attendance
+      PUBLIC_BASE_URL: http://localhost:8000
+      LOG_JSON: "false"
+      LOG_LEVEL: DEBUG
+      TRUST_PROXY_HEADERS: "false"
+    # Override the production entrypoint command with a reloading server. Migrations
+    # still run first (same entrypoint), then uvicorn --reload.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    volumes:
+      - ../backend:/app:cached
+    ports:
+      - "0.0.0.0:8000:8000"   # LAN-reachable on purpose (phones / emulator)
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata_dev:

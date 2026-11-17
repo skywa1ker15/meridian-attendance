@@ -1,0 +1,20 @@
+{
+  "_comment": "EXAMPLE ONLY. Download the real file from Firebase console > Project settings > Your apps (package za.co.meridiangroup.attendance) and save it as app/google-services.json. Never commit the real file.",
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "meridian-attendance-example",
+    "storage_bucket": "meridian-attendance-example.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": { "package_name": "za.co.meridiangroup.attendance" }
+      },
+      "oauth_client": [],
+      "api_key": [ { "current_key": "REPLACE_WITH_REAL_KEY_FROM_FIREBASE_CONSOLE" } ],
+      "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+    }
+  ],
+  "configuration_version": "1"
+}

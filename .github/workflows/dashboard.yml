@@ -1,0 +1,128 @@
+name: Admin dashboard
+
+# The dashboard is a static SPA served by the backend (backend/app/static/admin).
+# This workflow runs its Node unit tests and Playwright end-to-end tests against a
+# real backend started in the job (PostgreSQL service + uvicorn), seeded with
+# `python -m app.cli seed-demo` in APP_ENV=development (creates a demo admin).
+#
+# Expected layout (owned by the dashboard team): admin-dashboard/package.json with
+# scripts "test" (unit) and "test:e2e" (Playwright), tests under admin-dashboard/tests.
+# The e2e tests read BASE_URL, ADMIN_IDENTIFIER and ADMIN_PASSWORD from the environment.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/app/static/admin/**"
+      - "admin-dashboard/**"
+      - "backend/**"
+      - ".github/workflows/dashboard.yml"
+  pull_request:
+    paths:
+      - "backend/app/static/admin/**"
+      - "admin-dashboard/**"
+      - "backend/**"
+      - ".github/workflows/dashboard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit + Playwright e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: meridian_e2e
+          POSTGRES_USER: meridian
+          POSTGRES_PASSWORD: meridian_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U meridian -d meridian_e2e"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://meridian:meridian_e2e@127.0.0.1:5432/meridian_e2e
+      SECRET_KEY: ci-e2e-only-0123456789abcdef0123456789abcdef
+      PUBLIC_BASE_URL: http://127.0.0.1:8000
+      SCHEDULER_ENABLED: "false"
+      RATE_LIMIT_ENABLED: "false"
+      LOG_JSON: "false"
+      SERVE_ADMIN_DASHBOARD: "true"
+      # Demo admin created by `seed-demo`; the CLI prints/uses these in development only.
+      SEED_ADMIN_IDENTIFIER: admin@example.local
+      SEED_ADMIN_PASSWORD: DemoAdmin-Passw0rd!
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install backend
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Migrate and seed demo data (development only)
+        working-directory: backend
+        run: |
+          alembic upgrade head
+          python -m app.cli seed-demo --admin-identifier "$SEED_ADMIN_IDENTIFIER" --admin-password "$SEED_ADMIN_PASSWORD"
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > ../uvicorn.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/readyz; then echo; break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/readyz >/dev/null || { cat ../uvicorn.log; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: admin-dashboard/package-lock.json
+
+      - name: Install dashboard test dependencies
+        working-directory: admin-dashboard
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npx playwright install --with-deps chromium
+
+      - name: Unit tests
+        working-directory: admin-dashboard
+        run: npm test --if-present
+
+      - name: Playwright e2e
+        working-directory: admin-dashboard
+        env:
+          BASE_URL: http://127.0.0.1:8000
+          ADMIN_IDENTIFIER: ${{ env.SEED_ADMIN_IDENTIFIER }}
+          ADMIN_PASSWORD: ${{ env.SEED_ADMIN_PASSWORD }}
+          CI: "true"
+        run: npm run test:e2e --if-present
+
+      - name: Upload Playwright report and backend log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-e2e-report
+          path: |
+            admin-dashboard/playwright-report/
+            admin-dashboard/test-results/
+            uvicorn.log
+          if-no-files-found: ignore

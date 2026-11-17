@@ -1,0 +1,180 @@
+# Meridian Group Employee Attendance System — PRODUCTION compose file
+#
+# Usage (from the repository root):
+#   cp deploy/env/production.env.example deploy/env/production.env   # then fill it in
+#   docker compose --env-file deploy/env/production.env -f deploy/docker-compose.yml up -d
+#
+# Services
+#   db      PostgreSQL 16 with a persistent volume and a healthcheck
+#   api     FastAPI backend (image built from backend/Dockerfile, runs as non-root,
+#           runs `alembic upgrade head` in its entrypoint before starting gunicorn/uvicorn)
+#   caddy   Reverse proxy with automatic HTTPS (Let's Encrypt), security headers
+#   backup  pg_dump every night to ./backups (see deploy/scripts/backup.sh)
+#
+# Nothing in this file contains a secret. All values come from the env file.
+# Staging reuses this file with deploy/docker-compose.staging.yml layered on top.
+
+name: meridian-attendance
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in the env file}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in the env file}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+      # Force scram-sha-256 for password auth (PostgreSQL 16 default, made explicit).
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # The database is NOT published on any host port. Use `docker compose exec db psql`.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - timezone=UTC
+    networks: [internal]
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    # In production prefer the image published by CI instead of building on the host:
+    #   image: ghcr.io/<github-org>/meridian-attendance-api:${API_IMAGE_TAG:-latest}
+    image: ${API_IMAGE:-meridian-attendance-api:local}
+    restart: unless-stopped
+    user: "10001:10001"              # non-root; must match the user created in backend/Dockerfile
+    read_only: true
+    tmpfs:
+      - /tmp
+    env_file:
+      - ./env/production.env
+    environment:
+      # Compose-level overrides that must hold regardless of what the env file says.
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      TRUST_PROXY_HEADERS: "true"     # Caddy sets X-Forwarded-For; required for correct rate limiting / audit IPs
+      LOG_JSON: "true"
+      # Secrets files are mounted read-only below; the env file points at these paths.
+      FCM_SERVICE_ACCOUNT_FILE: ${FCM_SERVICE_ACCOUNT_FILE:-/run/secrets/fcm-service-account.json}
+      PLAY_INTEGRITY_SERVICE_ACCOUNT_FILE: ${PLAY_INTEGRITY_SERVICE_ACCOUNT_FILE:-/run/secrets/play-integrity-service-account.json}
+    volumes:
+      # Place the Firebase / Play Integrity service-account JSON files in deploy/secrets/
+      # (git-ignored). They are optional: without them push notifications are not sent and
+      # the app falls back to polling.
+      - ./secrets:/run/secrets:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      # /readyz checks the DB connection and that migrations are at head (see docs/API.md §9).
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks: [internal, edge]
+    logging: *default-logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"      # HTTP -> HTTPS redirect and ACME HTTP-01 challenge
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN (e.g. attendance.meridiangroup.co.za) in the env file}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in the env file}
+      ACME_CA: ${ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+      METRICS_ALLOW_CIDR: ${METRICS_ALLOW_CIDR:-private_ranges}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # certificates and ACME account; back this up
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [edge]
+    logging: *default-logging
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-35}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-00}   # 00:00 UTC = 02:00 SAST
+      # Optional off-site copy (rclone remote or S3-compatible bucket). See backup.sh.
+      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    # Simple in-container scheduler: sleep until the configured hour, run a backup, repeat.
+    command:
+      - |
+        set -eu
+        echo "backup sidecar started; daily at $${BACKUP_HOUR_UTC}:05 UTC, retention $${BACKUP_RETENTION_DAYS} days"
+        while true; do
+          now_h=$$(date -u +%H); now_m=$$(date -u +%M)
+          if [ "$$now_h" = "$${BACKUP_HOUR_UTC}" ] && [ "$$now_m" = "05" ]; then
+            /bin/sh /usr/local/bin/backup.sh || echo "BACKUP FAILED $$(date -u)"
+            sleep 60
+          fi
+          sleep 30
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    internal: true   # db and backup are never reachable from outside the host
+  edge:

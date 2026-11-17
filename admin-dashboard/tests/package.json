@@ -1,0 +1,17 @@
+{
+  "name": "meridian-admin-dashboard-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Unit, static and end-to-end tests for the Meridian attendance admin dashboard (backend/app/static/admin).",
+  "scripts": {
+    "check": "node tools/check-modules.mjs",
+    "test:unit": "node --test \"unit/*.test.mjs\"",
+    "smoke": "node tools/smoke-static.mjs",
+    "test:e2e": "playwright test --config e2e/playwright.config.js",
+    "test": "npm run check && npm run test:unit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

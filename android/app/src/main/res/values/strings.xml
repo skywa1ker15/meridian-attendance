@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English (South Africa). Default locale of the app; see xml/locales_config.xml. -->
+<resources>
+    <string name="app_name">Meridian Attendance</string>
+    <string name="there">there</string>
+    <string name="your_workplace">your workplace</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Back</string>
+    <string name="action_back_home">Back to home</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_done">Done</string>
+    <string name="action_keep">Keep it</string>
+    <string name="action_load_more">Load more</string>
+    <string name="action_ok">OK</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_review">Review</string>
+    <string name="action_review_arrival">Review clock-in</string>
+    <string name="action_review_departure">Review clock-out</string>
+    <string name="action_save">Save</string>
+    <string name="action_see_all">See all</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_history">History</string>
+    <string name="nav_requests">Requests</string>
+    <string name="nav_notifications">Notifications</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_admin">Manager tools</string>
+
+    <!-- Login -->
+    <string name="login_subtitle">Sign in with the details supplied by HR.</string>
+    <string name="login_identifier">Employee number or email</string>
+    <string name="login_identifier_hint">For example MG-0042</string>
+    <string name="login_password">Password</string>
+    <string name="login_show_password">Show password</string>
+    <string name="login_hide_password">Hide password</string>
+    <string name="login_submit">Sign in</string>
+    <string name="login_failed">Couldn\'t sign you in</string>
+    <string name="login_forgot">Forgot password?</string>
+    <string name="login_popia_note">Your location is only used to suggest clock-ins and clock-outs at your workplace. You always confirm before anything is recorded.</string>
+    <string name="forgot_title">Reset your password</string>
+    <string name="forgot_body">Enter your employee number or email. If an account exists and email is set up, you\'ll receive a reset link valid for 30 minutes. You can also ask HR for a temporary password.</string>
+    <string name="forgot_send">Send reset link</string>
+    <string name="forgot_sent">If the details match an account, a reset link is on its way. Check your email, or contact HR if nothing arrives.</string>
+
+    <!-- Password change -->
+    <string name="change_password_title">Change your password</string>
+    <string name="change_password_forced">You signed in with a temporary password. Please choose your own password to continue.</string>
+    <string name="change_password_body">Choose a new password that you don\'t use anywhere else.</string>
+    <string name="change_password_current">Current password</string>
+    <string name="change_password_new">New password</string>
+    <string name="change_password_confirm">Confirm new password</string>
+    <string name="change_password_policy">At least 10 characters, not your employee number or email, and not a commonly used password.</string>
+    <string name="change_password_submit">Save new password</string>
+    <string name="change_password_failed">Password not changed</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+    <string name="ob_intro_title">How attendance works</string>
+    <string name="ob_intro_body">Meridian Attendance uses your phone\'s location (and optionally your workplace Wi-Fi) to notice when you arrive at or leave your Meridian workplace. It then asks you to confirm. Nothing is recorded without your confirmation, and you are never clocked out automatically.\n\nWhy we need this (POPIA): the only purpose is recording your working time. Location is checked against your workplace boundary only when you arrive or leave; it is not used to track where you go. Detection data is kept according to Meridian\'s retention policy and is visible to you and authorised managers. You can withdraw permissions at any time in Settings and record attendance through manual requests instead.</string>
+    <string name="ob_intro_cta">Set up permissions</string>
+    <string name="ob_notif_title">Notifications</string>
+    <string name="ob_notif_body">We notify you when an arrival or departure is detected so you can confirm it, and when a request is reviewed.</string>
+    <string name="ob_location_title">Precise location</string>
+    <string name="ob_location_body">Precise location lets the app tell whether you are inside your workplace boundary (about 150 m). Approximate location is not accurate enough.</string>
+    <string name="ob_precise_needed_title">Precise location is off</string>
+    <string name="ob_precise_needed_body">You allowed approximate location only. Please allow precise location so arrivals can be detected.</string>
+    <string name="ob_background_title">Location all the time</string>
+    <string name="ob_background_body">Arrivals and departures happen while the app is closed, so Android requires \"Allow all the time\". The app is only woken when you cross your workplace boundary; it does not track your route.</string>
+    <string name="ob_background_settings_hint">In Settings, open Permissions → Location and choose \"Allow all the time\". Then come back here.</string>
+    <string name="ob_background_needs_precise_title">Precise location first</string>
+    <string name="ob_background_needs_precise_body">Go back one step and allow precise location first.</string>
+    <string name="ob_battery_title">Battery optimisation</string>
+    <string name="ob_battery_body">Some phones delay background work to save battery, which can make detection late or missed. In the list that opens, choose Meridian Attendance and select \"Don\'t optimise\" / \"Unrestricted\". The app uses very little battery: it only wakes on boundary crossings.</string>
+    <string name="ob_battery_cta">Open battery settings</string>
+    <string name="ob_wifi_title">Workplace Wi-Fi (optional)</string>
+    <string name="ob_wifi_body">If your workplace uses Wi-Fi verification, the name of the Wi-Fi network you are connected to is sent with a detection as extra evidence. Other networks around you are never scanned or sent.</string>
+    <string name="ob_turn_on_wifi">Turn on Wi-Fi</string>
+    <string name="ob_turn_on_location">Turn on location</string>
+    <string name="ob_done_title">You\'re all set</string>
+    <string name="ob_done_body">Here is what the app can use. You can change this at any time from Profile → Permissions.</string>
+    <string name="ob_finish">Go to my dashboard</string>
+    <string name="ob_allow">Allow</string>
+    <string name="ob_open_settings">Open app settings</string>
+    <string name="ob_skip">Skip for now</string>
+    <string name="ob_granted">Granted</string>
+    <string name="ob_continue_without">Continue without</string>
+    <string name="ob_required_warning">Without this, arrivals and departures can\'t be detected. You can still use manual requests.</string>
+
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_precise_location">Precise location</string>
+    <string name="perm_background_location">Location all the time</string>
+    <string name="perm_location_services">Location services</string>
+    <string name="perm_battery">Battery unrestricted</string>
+    <string name="perm_wifi">Wi-Fi details</string>
+    <string name="perm_on">On</string>
+    <string name="perm_off">Off</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_greeting">Hello, %1$s</string>
+    <string name="dashboard_clock_in">Clock-in</string>
+    <string name="dashboard_clock_out">Clock-out</string>
+    <string name="dashboard_worked_today">today</string>
+    <string name="dashboard_pending_title">Waiting for your confirmation</string>
+    <string name="dashboard_week">This week</string>
+    <string name="dashboard_month">This month</string>
+    <string name="dashboard_recent">Recent days</string>
+    <string name="dashboard_no_recent">No attendance recorded yet.</string>
+    <string name="dashboard_no_data">Pull down to load today\'s summary.</string>
+    <string name="pending_arrival_title">Arrival detected</string>
+    <string name="pending_departure_title">Departure detected</string>
+    <string name="pending_detected_at">%1$s at %2$s · %3$s away</string>
+
+    <string name="today_not_started">Not clocked in</string>
+    <string name="today_pending_arrival">Arrival to confirm</string>
+    <string name="today_clocked_in">Clocked in</string>
+    <string name="today_pending_departure">Departure to confirm</string>
+    <string name="today_clocked_out">Clocked out</string>
+    <string name="today_missing_clock_out">Missing clock-out</string>
+    <string name="today_unknown">Unknown</string>
+    <string name="status_late">Late</string>
+    <string name="status_late_minutes">Late %1$d min</string>
+    <string name="status_manual">Manual</string>
+    <string name="status_corrected">Corrected</string>
+    <string name="status_saved_offline">Saved offline</string>
+
+    <!-- Banners -->
+    <string name="banner_device_revoked_title">This phone has been revoked</string>
+    <string name="banner_device_revoked_body">Attendance from this phone is no longer accepted. Contact your administrator.</string>
+    <string name="banner_device_pending_title">Waiting for device approval</string>
+    <string name="banner_device_pending_body">An administrator must approve this phone before attendance can be submitted. Detections are kept and sent once approved.</string>
+    <string name="banner_location_off_title">Location is switched off</string>
+    <string name="banner_location_off_body">Arrivals and departures can\'t be detected while location is off.</string>
+    <string name="banner_permissions_title">Permissions needed</string>
+    <string name="banner_permissions_body">Some permissions were turned off, so detection may not work.</string>
+    <string name="banner_permissions_action">Fix permissions</string>
+    <string name="banner_workplace_title">Workplace not configured yet</string>
+    <string name="banner_workplace_body">Management hasn\'t confirmed your workplace location yet, so automatic detection is off. You can still submit manual requests.</string>
+    <string name="banner_failed_title">Something couldn\'t be submitted</string>
+    <string name="banner_failed_body">The server refused an item (for example, it had already expired). Submit a manual request if attendance is missing.</string>
+    <string name="banner_failed_action">Dismiss</string>
+    <string name="banner_refresh_failed">Couldn\'t refresh</string>
+
+    <!-- Confirmation -->
+    <string name="confirm_arrival_title">Confirm your arrival</string>
+    <string name="confirm_departure_title">Confirm your departure</string>
+    <string name="confirm_arrival_body">Your phone detected that you arrived at work. Confirm to clock in.</string>
+    <string name="confirm_departure_body">Your phone detected that you left work. Confirm to clock out. If you are still at work, choose \"This wasn\'t me\".</string>
+    <string name="confirm_workplace">Workplace</string>
+    <string name="confirm_detected">Detected</string>
+    <string name="confirm_distance">Distance from workplace</string>
+    <string name="confirm_accuracy">Location accuracy</string>
+    <string name="confirm_wifi">Workplace Wi-Fi</string>
+    <string name="confirm_wifi_matched">Matched</string>
+    <string name="confirm_wifi_not_matched">Not matched</string>
+    <string name="confirm_wifi_not_checked">Not checked</string>
+    <string name="confirm_expires">Expires</string>
+    <string name="confirm_expires_in">in %1$s</string>
+    <string name="confirm_review_title">A manager may need to review this</string>
+    <string name="confirm_review_body">The detection didn\'t fully match your workplace (location or Wi-Fi). You can still confirm; a manager will check it.</string>
+    <string name="confirm_official_time_note">The official time is the time the server received the detection, not the time you confirm.</string>
+    <string name="confirm_note">Note (optional)</string>
+    <string name="confirm_arrival_cta">Confirm clock-in</string>
+    <string name="confirm_departure_cta">Confirm clock-out</string>
+    <string name="confirm_not_me">This wasn\'t me</string>
+    <string name="confirm_failed">Couldn\'t complete</string>
+    <string name="confirm_missing_title">Detection not found</string>
+    <string name="confirm_missing_body">This detection may have expired or already been handled.</string>
+    <string name="confirm_already_title">Already handled</string>
+    <string name="confirm_already_body">This detection is no longer waiting for you.</string>
+    <string name="dismiss_title">Dismiss this detection?</string>
+    <string name="dismiss_body">Tell us why. Dismissed detections stay visible to management.</string>
+    <string name="dismiss_not_at_work">I\'m not at work</string>
+    <string name="dismiss_wrong_detection">Wrong detection (e.g. I\'m still at work)</string>
+    <string name="dismiss_other">Other</string>
+    <string name="dismiss_note">Details</string>
+    <string name="dismiss_submit">Dismiss</string>
+    <string name="result_clocked_in">You\'re clocked in</string>
+    <string name="result_clocked_out">You\'re clocked out</string>
+    <string name="result_confirmed_body">Your attendance has been recorded.</string>
+    <string name="result_review_title">Sent for review</string>
+    <string name="result_review_body">Your confirmation was received. A manager will review it before it counts.</string>
+    <string name="result_dismissed_title">Dismissed</string>
+    <string name="result_dismissed_body">Thanks. Nothing was recorded.</string>
+    <string name="result_queued_title">Saved on your phone</string>
+    <string name="result_queued_confirm_body">You\'re offline. Your confirmation will be sent automatically. It is not recorded until the server accepts it.</string>
+    <string name="result_queued_dismiss_body">You\'re offline. Your answer will be sent automatically.</string>
+
+    <!-- History & detail -->
+    <string name="history_title">Attendance history</string>
+    <string name="history_total">%1$d days · %2$s worked</string>
+    <string name="history_empty_title">No attendance in this period</string>
+    <string name="history_empty_body">If you worked but nothing shows here, submit a manual request.</string>
+    <string name="range_this_week">This week</string>
+    <string name="range_this_month">This month</string>
+    <string name="range_last_30">Last 30 days</string>
+    <string name="range_last_90">Last 90 days</string>
+    <string name="filter_all">All</string>
+    <string name="filter_closed">Closed</string>
+    <string name="filter_open">Open</string>
+    <string name="filter_missing">Missing clock-out</string>
+    <string name="filter_late">Late</string>
+    <string name="detail_worked">Worked</string>
+    <string name="detail_break">Break</string>
+    <string name="detail_overtime">Overtime</string>
+    <string name="detail_correction_note">Correction</string>
+    <string name="detail_notes">Notes</string>
+    <string name="detail_timeline">Timeline</string>
+    <string name="detail_no_events">No detection events for this day.</string>
+    <string name="detail_request_correction">Request a correction</string>
+    <string name="event_arrival">Arrival</string>
+    <string name="event_departure">Departure</string>
+    <string name="event_detected_line">Detected %1$s · %2$s from workplace</string>
+    <string name="event_official_line">Official time %1$s</string>
+    <string name="event_review_note">Reviewer: %1$s</string>
+
+    <!-- Requests -->
+    <string name="requests_title">My requests</string>
+    <string name="requests_new">New request</string>
+    <string name="requests_new_title">Manual attendance request</string>
+    <string name="requests_empty_title">No requests yet</string>
+    <string name="requests_empty_body">Missed a clock-in or clock-out? Create a request and a manager will review it.</string>
+    <string name="requests_cancel">Cancel request</string>
+    <string name="requests_cancel_title">Cancel this request?</string>
+    <string name="requests_cancel_body">The request will be withdrawn. You can create a new one later.</string>
+    <string name="requests_cancel_confirm">Cancel request</string>
+    <string name="requests_submit">Submit request</string>
+    <string name="requests_sent_title">Request saved</string>
+    <string name="requests_failed">Request not submitted</string>
+    <string name="request_type">Request type</string>
+    <string name="request_date">Date</string>
+    <string name="request_clock_in">Clock-in time</string>
+    <string name="request_clock_out">Clock-out time</string>
+    <string name="request_times_note">Times are South African time (SAST).</string>
+    <string name="request_reason">Reason</string>
+    <string name="request_reason_hint">For example: phone battery died.</string>
+    <string name="request_tap_to_choose">Tap to choose</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_mark_all">Mark all read</string>
+    <string name="notifications_empty_title">You\'re up to date</string>
+    <string name="notifications_empty_body">Confirmations and request updates will appear here.</string>
+    <string name="channel_confirmations">Attendance confirmations</string>
+    <string name="channel_confirmations_desc">Arrival and departure detections that need your confirmation.</string>
+    <string name="channel_general">General</string>
+    <string name="channel_general_desc">Request reviews, corrections and other updates.</string>
+    <string name="channel_background">Background activity</string>
+    <string name="channel_background_desc">Shown briefly on older Android versions while a detection is processed.</string>
+    <string name="notif_arrival_title">Arrived at work?</string>
+    <string name="notif_departure_title">Leaving work?</string>
+    <string name="notif_reminder_title">Reminder: confirmation needed</string>
+    <string name="notif_arrival_body">Arrival at %1$s detected at %2$s (%3$s away). Tap to confirm your clock-in.</string>
+    <string name="notif_departure_body">Departure from %1$s detected at %2$s (%3$s away). Tap to confirm your clock-out.</string>
+    <string name="notif_public_title">Attendance confirmation needed</string>
+    <string name="notif_location_off_title">Location switched off</string>
+    <string name="notif_location_off_body">Meridian Attendance can\'t detect arrivals or departures while location is off.</string>
+    <string name="notif_submission_failed_title">Attendance not submitted</string>
+    <string name="notif_submission_failed_body">An attendance item could not be submitted. Open the app for details or submit a manual request.</string>
+    <string name="notif_working">Processing attendance detection…</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Profile &amp; settings</string>
+    <string name="profile_employee_number">Employee number</string>
+    <string name="profile_email">Email</string>
+    <string name="profile_phone">Phone</string>
+    <string name="profile_department">Department</string>
+    <string name="profile_role">Role</string>
+    <string name="profile_edit_phone">Edit phone</string>
+    <string name="profile_request_correction">Request correction</string>
+    <string name="profile_correction_title">Profile correction</string>
+    <string name="profile_correction_body">Choose the detail that is wrong and enter the correct value. HR or an administrator will review the change.</string>
+    <string name="profile_correction_value">Correct value</string>
+    <string name="profile_settings">Settings</string>
+    <string name="profile_push">Push notifications</string>
+    <string name="profile_push_body">Receive confirmations and updates instantly.</string>
+    <string name="profile_push_unavailable">Push is not configured in this build; the app checks for updates when opened and every 15 minutes.</string>
+    <string name="profile_change_password">Change password</string>
+    <string name="profile_permissions">Permissions</string>
+    <string name="profile_rerun_onboarding">Run setup again</string>
+    <string name="profile_device">This device</string>
+    <string name="profile_device_model">Model</string>
+    <string name="profile_android">Android</string>
+    <string name="profile_installation_id">Installation ID</string>
+    <string name="profile_device_status">Device status</string>
+    <string name="profile_app_version">App version</string>
+    <string name="profile_api_host">Server</string>
+    <string name="profile_privacy">Privacy notice</string>
+    <string name="profile_logout">Sign out</string>
+    <string name="logout_title">Sign out?</string>
+    <string name="logout_body">Detection stops and unsent items on this phone are removed. Make sure you are online so everything is synced first.</string>
+    <string name="privacy_title">Privacy notice (POPIA)</string>
+    <string name="privacy_body">Responsible party: Meridian Group.\n\nWhat we process: your name, employee number, contact details, department, attendance records, and — only at the moment an arrival or departure is detected or confirmed — your phone\'s location (with accuracy), the connected Wi-Fi network name (if enabled), battery level and basic device details (model, Android version, app version, installation ID).\n\nWhy: to record working time accurately and to prevent fraudulent attendance. Location is compared with your workplace boundary; your route is not tracked.\n\nWho sees it: you, and authorised managers and administrators of Meridian Group. Data is stored on Meridian\'s servers and is not sold or used for advertising.\n\nHow long: according to Meridian\'s retention policy; location details are pseudonymised after the configured location-retention period.\n\nYour rights: you may request access to or correction of your personal information (Profile → Request correction) and object to processing by contacting HR or Meridian\'s Information Officer. You may switch off location permissions at any time and use manual requests instead.</string>
+
+    <!-- Admin -->
+    <string name="admin_title">Manager tools</string>
+    <string name="admin_body">Available because of your role. All actions are audit-logged.</string>
+    <string name="admin_review_title">Pending confirmations</string>
+    <string name="admin_review_body">Approve or reject events that need review.</string>
+    <string name="admin_live_title">Live attendance</string>
+    <string name="admin_live_body">Who is clocked in today.</string>
+    <string name="admin_no_access_title">No manager permissions</string>
+    <string name="admin_no_access_body">Your account doesn\'t have access to these tools.</string>
+    <string name="admin_review_empty_title">Nothing to review</string>
+    <string name="admin_review_empty_body">All events have been handled.</string>
+    <string name="admin_live_empty_title">No employees</string>
+    <string name="admin_live_empty_body">No attendance data for today yet.</string>
+    <string name="admin_event">Event</string>
+    <string name="admin_score">Verification score</string>
+    <string name="admin_reason">Review reason</string>
+    <string name="admin_approve">Approve</string>
+    <string name="admin_reject">Reject</string>
+    <string name="admin_approve_title">Approve event</string>
+    <string name="admin_reject_title">Reject event</string>
+    <string name="admin_note">Note</string>
+    <string name="admin_note_hint">Required. Recorded in the audit log.</string>
+    <string name="admin_pending">Pending</string>
+</resources>

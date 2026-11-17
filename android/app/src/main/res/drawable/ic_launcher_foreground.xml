@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PLACEHOLDER neutral monogram "M" on navy. Not the official Meridian Group logo, which was not supplied:
+     replace before release (docs/android/BUILD-VERIFICATION.md, "Branding"). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M36,72 L36,36 L44,36 L54,52 L64,36 L72,36 L72,72 L65,72 L65,48 L56,62 L52,62 L43,48 L43,72 Z" />
+    <path
+        android:fillColor="#FF7FA6F5"
+        android:pathData="M36,76 L72,76 L72,79 L36,79 Z" />
+</vector>

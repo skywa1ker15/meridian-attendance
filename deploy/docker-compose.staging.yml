@@ -1,0 +1,31 @@
+# Meridian Attendance — STAGING override
+#
+# Layer this on top of the production file. Staging is identical to production except:
+#   * it reads deploy/env/staging.env
+#   * APP_ENV=staging (the backend applies the same hard checks as production:
+#     strong SECRET_KEY, https PUBLIC_BASE_URL, no development DB credentials)
+#   * Let's Encrypt STAGING CA is used so repeated rebuilds do not hit rate limits
+#     (browsers / phones will show a certificate warning — expected on staging;
+#     switch ACME_CA to production in staging.env if you need a trusted cert)
+#   * shorter backup retention
+#
+#   docker compose --env-file deploy/env/staging.env \
+#     -f deploy/docker-compose.yml -f deploy/docker-compose.staging.yml up -d
+
+name: meridian-attendance-staging
+
+services:
+  api:
+    env_file:
+      - ./env/staging.env
+    environment:
+      APP_ENV: staging
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+
+  caddy:
+    environment:
+      ACME_CA: ${ACME_CA:-https://acme-staging-v02.api.letsencrypt.org/directory}
+
+  backup:
+    environment:
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}

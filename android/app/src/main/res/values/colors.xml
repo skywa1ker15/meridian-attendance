@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tokens from docs/DESIGN.md. Compose uses ui/theme/Color.kt (same values). -->
+<resources>
+    <color name="navy_950">#FF070F1F</color>
+    <color name="navy_900">#FF0B1A33</color>
+    <color name="navy_800">#FF10264D</color>
+    <color name="navy_700">#FF163A6E</color>
+    <color name="navy_600">#FF1F4C8F</color>
+    <color name="blue_500">#FF2F6FED</color>
+    <color name="blue_300">#FF7FA6F5</color>
+    <color name="blue_100">#FFDCE7FB</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="grey_100">#FFF3F6FB</color>
+    <color name="grey_300">#FFCBD5E3</color>
+    <color name="text_dark">#FF0E1A2B</color>
+    <color name="text_light">#FFE8EEF9</color>
+    <color name="green_500">#FF1FA463</color>
+    <color name="orange_500">#FFF28C28</color>
+    <color name="red_500">#FFE5484D</color>
+    <color name="ic_launcher_background">#FF163A6E</color>
+</resources>

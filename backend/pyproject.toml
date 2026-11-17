@@ -1,0 +1,26 @@
+[project]
+name = "meridian-attendance-backend"
+version = "1.0.0"
+description = "Meridian Group Employee Attendance System — FastAPI backend"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+    "ignore::DeprecationWarning:alembic.*",
+]
+
+[tool.ruff]
+line-length = 200
+target-version = "py312"
+extend-exclude = ["app/static"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+# B008: FastAPI's Depends()/Query() in argument defaults is idiomatic.
+# B904: ApiError re-raises are intentional; E501 handled by line-length.
+ignore = ["E501", "B008", "B904"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]

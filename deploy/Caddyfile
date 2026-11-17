@@ -1,0 +1,80 @@
+# Caddy reverse proxy for the Meridian Attendance backend.
+#
+# Environment variables (set by deploy/docker-compose.yml from the env file):
+#   DOMAIN              attendance.<your-domain>   e.g. attendance.meridiangroup.co.za
+#   ACME_EMAIL          address Let's Encrypt notifies about certificate expiry
+#   ACME_CA             ACME directory (production by default; staging override uses the LE staging CA)
+#   METRICS_ALLOW_CIDR  ONE CIDR (or the keyword private_ranges, the default) allowed to read /metrics.
+#                       To allow several networks edit the @metrics_denied matcher below directly.
+#
+# Certificates are obtained and renewed automatically (HTTP-01 on :80 / TLS-ALPN on :443).
+# The DNS A/AAAA record for DOMAIN must point at this host and ports 80/443 must be open.
+
+{
+	email {$ACME_EMAIL}
+	acme_ca {$ACME_CA}
+	# Admin API only reachable inside the container (used by the compose healthcheck).
+	admin 127.0.0.1:2019
+	servers {
+		# Pass the real client IP to the API (TRUST_PROXY_HEADERS=true on the API side).
+		trusted_proxies static private_ranges
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# --- Security headers (the API adds its own CSP for /admin; these are the proxy baseline)
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		-Server
+		-X-Powered-By
+	}
+
+	# --- /metrics: Prometheus scrape endpoint. Only private networks (or the monitoring
+	#     host) may reach it; the API additionally requires METRICS_TOKEN when set.
+	@metrics path /metrics
+	@metrics_denied {
+		path /metrics
+		not remote_ip {$METRICS_ALLOW_CIDR}
+	}
+	respond @metrics_denied 403
+
+	# --- Interactive API docs are useful on staging. On production, uncomment to hide them:
+	# @docs path /api/docs /api/redoc /api/openapi.json
+	# respond @docs 404
+
+	# --- Request size limit (attendance payloads and sync batches are small).
+	request_body {
+		max_size 2MB
+	}
+
+	# --- Everything else goes to the API container.
+	reverse_proxy api:8000 {
+		header_up X-Real-IP {remote_host}
+		health_uri /healthz
+		health_interval 30s
+		health_timeout 5s
+		# Long report exports (PDF/XLSX over a month) can take a few seconds.
+		transport http {
+			read_timeout 120s
+			write_timeout 120s
+			dial_timeout 5s
+		}
+	}
+
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+}
+
+# Plain HTTP on :80 is handled automatically by Caddy: ACME challenges are answered and
+# everything else is redirected to https://{$DOMAIN}.

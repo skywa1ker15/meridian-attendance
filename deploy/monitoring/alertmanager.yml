@@ -1,0 +1,27 @@
+# Alertmanager routing. Replace the receiver with your e-mail / Slack / Teams / PagerDuty details.
+global:
+  resolve_timeout: 5m
+  # smtp_smarthost: smtp.<your-provider>:587
+  # smtp_from: alerts@<your-domain>
+  # smtp_auth_username: <<smtp-username>>
+  # smtp_auth_password: <<smtp-password>>
+
+route:
+  receiver: it-operations
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: it-operations
+      repeat_interval: 1h
+
+receivers:
+  - name: it-operations
+    # email_configs:
+    #   - to: it-operations@<your-domain>
+    # webhook_configs:                      # Microsoft Teams / Slack via incoming webhook
+    #   - url: https://<<webhook-url>>
+    webhook_configs:
+      - url: http://127.0.0.1:9/   # placeholder sink; replace before relying on alerts

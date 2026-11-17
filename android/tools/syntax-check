@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# Best-effort static check of the WHOLE Android app without Gradle / Android SDK / Maven access.
+#
+# 1. XML well-formedness of the manifest and every res/**/*.xml.
+# 2. Resource & manifest cross-references: every R.string/R.drawable/R.color/R.mipmap/R.xml used in Kotlin exists,
+#    every @string/@xml/@drawable/@mipmap/@color/@style used in XML exists, every manifest component class exists.
+# 3. kotlinc over ALL main + test + androidTest sources (with the kotlinx-serialization runtime/plugin and
+#    kotlinx-coroutines that ARE available locally). Android/AndroidX/Compose/Retrofit/OkHttp/Room/WorkManager/
+#    Play services/Firebase are NOT available, so the compiler necessarily reports "unresolved reference" for
+#    them. Classification of every error:
+#      FAIL  - any error located in the Android-free sources (core/, data/remote/dto/, data/remote/ApiJson.kt);
+#      FAIL  - syntax errors anywhere (expecting…, unexpected…, unclosed…, missing…);
+#      FAIL  - duplicate declarations anywhere (conflicting declarations/overloads, redeclaration);
+#      FAIL  - "unresolved reference 'X'" where X is NOT imported from a library in that file but IS declared
+#              in this project (a typo / missing project import), or where the line is a project import;
+#      ALLOW - "unresolved reference 'X'" where X is imported from a library package, or is not a project name
+#              (a member of an unresolved library type);
+#      REPORT- every other error (type inference / mismatch errors that cascade from unresolved library types).
+#              They are written to build/syntax-check/cascades.txt and counted, not failed: without the real
+#              libraries they cannot be told apart from genuine type errors. See docs/android/BUILD-VERIFICATION.md.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ANDROID_DIR="$(cd "$HERE/.." && pwd)"
+KOTLINC_HOME="${KOTLINC_HOME:-/opt/kotlinc}"
+OUT="$ANDROID_DIR/build/syntax-check"
+mkdir -p "$OUT"
+
+SER_JARS="${KOTLINX_SERIALIZATION_JARS:-}"
+if [ -z "$SER_JARS" ]; then
+  for d in ${GRADLE_HOME:-} /opt/gradle-8.14.3 /opt/gradle; do
+    if [ -d "$d/lib" ]; then
+      c=$(ls "$d"/lib/kotlinx-serialization-core-jvm-*.jar 2>/dev/null | head -1 || true)
+      j=$(ls "$d"/lib/kotlinx-serialization-json-jvm-*.jar 2>/dev/null | head -1 || true)
+      [ -n "$c" ] && [ -n "$j" ] && SER_JARS="$c:$j" && break
+    fi
+  done
+fi
+COROUTINES_JAR="$(ls "$KOTLINC_HOME"/lib/kotlinx-coroutines-core-jvm*.jar 2>/dev/null | head -1 || true)"
+CP="${SER_JARS}:${COROUTINES_JAR}:$KOTLINC_HOME/lib/kotlin-test.jar:$KOTLINC_HOME/lib/kotlin-test-junit.jar"
+
+cd "$ANDROID_DIR"
+mapfile -t SOURCES < <(find app/src/main/kotlin app/src/test/kotlin app/src/androidTest/kotlin -name '*.kt' 2>/dev/null | sort)
+# org.junit.Test stub (kotlin.test.Test is a typealias to it; no JUnit jar is available offline).
+SOURCES+=("$HERE/runner/junit-stub/org/junit/Test.kt")
+echo "syntax-check: kotlinc over ${#SOURCES[@]} Kotlin files (this takes ~30 s)"
+set +e
+"$KOTLINC_HOME/bin/kotlinc" -nowarn -language-version 2.3 -jvm-target 17 \
+  "-Xplugin=$KOTLINC_HOME/lib/kotlinx-serialization-compiler-plugin.jar" \
+  -cp "$CP" -d "$OUT/classes" "${SOURCES[@]}" > "$OUT/kotlinc.log" 2>&1
+set -e
+
+python3 - "$ANDROID_DIR" "$OUT" <<'PY'
+import os, re, sys, xml.dom.minidom, glob
+root, out = sys.argv[1], sys.argv[2]
+app = os.path.join(root, "app")
+failures, notes = [], []
+
+# ---------- 1. XML well-formedness ----------
+xml_files = [os.path.join(app, "src/main/AndroidManifest.xml")] + glob.glob(os.path.join(app, "src/*/res/**/*.xml"), recursive=True)
+for f in xml_files:
+    try:
+        xml.dom.minidom.parse(f)
+    except Exception as e:
+        failures.append(f"XML not well-formed: {os.path.relpath(f, root)}: {e}")
+
+# ---------- 2. Resource references ----------
+res_names = {"string": set(), "drawable": set(), "color": set(), "mipmap": set(), "xml": set(), "style": set()}
+for f in glob.glob(os.path.join(app, "src/*/res/values*/*.xml")):
+    dom = xml.dom.minidom.parse(f)
+    for tag, kind in (("string", "string"), ("color", "color"), ("style", "style")):
+        for n in dom.getElementsByTagName(tag):
+            res_names[kind].add(n.getAttribute("name"))
+for kind in ("drawable", "mipmap", "xml"):
+    for f in glob.glob(os.path.join(app, f"src/*/res/{kind}*/*")):
+        res_names[kind].add(os.path.splitext(os.path.basename(f))[0])
+# styles from libraries we inherit from (core-splashscreen)
+lib_styles = {"Theme.SplashScreen"}
+
+kt_files = glob.glob(os.path.join(app, "src/**/*.kt"), recursive=True)
+for f in kt_files:
+    text = open(f, encoding="utf-8").read()
+    for kind, name in re.findall(r"\bR\.(string|drawable|color|mipmap|xml)\.([A-Za-z0-9_]+)", text):
+        if name not in res_names[kind]:
+            failures.append(f"Missing resource R.{kind}.{name} used in {os.path.relpath(f, root)}")
+for f in xml_files:
+    text = open(f, encoding="utf-8").read()
+    for kind, name in re.findall(r"@(string|drawable|color|mipmap|xml|style)/([A-Za-z0-9_.]+)", text):
+        if name not in res_names[kind] and name not in lib_styles:
+            failures.append(f"Missing resource @{kind}/{name} referenced in {os.path.relpath(f, root)}")
+    for parent in re.findall(r'parent="([^"@]+)"', text):
+        if not parent.startswith("android:") and parent not in res_names["style"] and parent not in lib_styles:
+            failures.append(f"Unknown parent style {parent} in {os.path.relpath(f, root)}")
+
+# Manifest component classes
+manifest = open(os.path.join(app, "src/main/AndroidManifest.xml"), encoding="utf-8").read()
+pkg = "za.co.meridiangroup.attendance"
+for cls in re.findall(r'android:name="(\.[A-Za-z0-9_.]+)"', manifest):
+    fq = pkg + cls
+    simple = fq.rsplit(".", 1)[1]
+    path_pkg = fq.rsplit(".", 1)[0].replace(".", "/")
+    found = False
+    for f in glob.glob(os.path.join(app, "src/main/kotlin", path_pkg, "*.kt")):
+        if re.search(r"\bclass\s+" + re.escape(simple) + r"\b", open(f, encoding="utf-8").read()):
+            found = True
+            break
+    if not found:
+        failures.append(f"Manifest references missing class {fq}")
+
+# ---------- 3. kotlinc diagnostics ----------
+# Names a file could reference *unqualified*: top-level declarations (column 0) and every class/object/
+# interface/enum name. Members and locals are excluded (they are only reachable through a receiver).
+project_names = set()
+type_decl = re.compile(r"\b(?:class|interface|object|typealias)\s+([A-Za-z_][A-Za-z0-9_]*)")
+top_decl = re.compile(r"^(?:(?:private|internal|public|inline|suspend|const|data|sealed|enum|abstract|open)\s+)*(?:fun|val|var)\s+(?:<[^>]*>\s*)?(?:[A-Za-z0-9_.<>?]+\.)?([A-Za-z_][A-Za-z0-9_]*)", re.M)
+project_types = set()
+imports_by_file = {}
+for f in kt_files:
+    text = open(f, encoding="utf-8").read()
+    project_types.update(type_decl.findall(text))
+    project_names.update(type_decl.findall(text))
+    project_names.update(top_decl.findall(text))
+    lib_imports = set()
+    for imp in re.findall(r"^import\s+([A-Za-z0-9_.]+)(?:\s+as\s+([A-Za-z0-9_]+))?", text, re.M):
+        path, alias = imp
+        if not path.startswith(pkg):
+            lib_imports.add(alias or path.rsplit(".", 1)[1])
+    imports_by_file[os.path.relpath(f, root)] = (lib_imports, text.splitlines())
+
+android_free = re.compile(r"app/src/(main|test)/kotlin/za/co/meridiangroup/attendance/(core/|data/remote/dto/|data/remote/ApiJson\.kt|data/remote/DtoContractTest\.kt)")
+syntax = re.compile(r"error: (expecting|unexpected|unclosed|missing '|incomplete|unresolved label|syntax error)", re.I)
+dupes = re.compile(r"error: (conflicting declarations|conflicting overloads|redeclaration)", re.I)
+diag = re.compile(r"^(app/src/[^:]+\.kt):(\d+):(\d+): error: (.*)$")
+
+log = open(os.path.join(out, "kotlinc.log"), encoding="utf-8", errors="replace").read().splitlines()
+allowed = cascade = 0
+cascades = []
+for line in log:
+    m = diag.match(line)
+    if not m:
+        continue
+    f, ln, col, msg = m.group(1), int(m.group(2)), m.group(3), m.group(4)
+    loc = f"{f}:{ln}:{col}"
+    if android_free.search(f):
+        failures.append(f"Error in Android-free source {loc}: {msg}"); continue
+    if syntax.search(line):
+        failures.append(f"Syntax error {loc}: {msg}"); continue
+    if dupes.search(line):
+        failures.append(f"Duplicate declaration {loc}: {msg}"); continue
+    um = re.match(r"unresolved reference '([^']+)'", msg)
+    if um:
+        name = um.group(1)
+        lib_imports, lines = imports_by_file.get(f, (set(), []))
+        src = lines[ln - 1] if 0 < ln <= len(lines) else ""
+        generated = (pkg + ".R", pkg + ".BuildConfig")  # produced by AGP at build time
+        if src.lstrip().startswith("import " + pkg) and src.strip().split()[1] not in generated:
+            failures.append(f"Unresolved PROJECT import {loc}: {src.strip()}"); continue
+        c = int(col) - 1
+        before = src[:c].rstrip()
+        if before.endswith(".") or before.endswith("?.") or before.endswith("::"):
+            # Qualified reference: only suspicious when the receiver is one of OUR types/objects.
+            recv = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*\??\.?:?:?$", before)
+            r = recv.group(1) if recv else ""
+            if r and r in project_types and r not in lib_imports and r[0].isupper():
+                failures.append(f"Unresolved member '{name}' of project type '{r}' {loc}"); continue
+            allowed += 1; continue
+        if name in lib_imports or name not in project_names:
+            allowed += 1; continue
+        failures.append(f"Unresolved project symbol '{name}' (not imported from a library) {loc}"); continue
+    cascade += 1
+    cascades.append(f"{loc}: {msg}")
+
+open(os.path.join(out, "cascades.txt"), "w").write("\n".join(cascades) + "\n")
+print(f"syntax-check: XML files {len(xml_files)}, Kotlin files {len(kt_files)}")
+print(f"syntax-check: allowed unresolved library references: {allowed}")
+print(f"syntax-check: cascading library-type errors (reported, not failed): {cascade} -> {os.path.relpath(out, root)}/cascades.txt")
+if failures:
+    print(f"syntax-check: FAILED with {len(failures)} problem(s):")
+    for x in failures:
+        print("  - " + x)
+    sys.exit(1)
+print("syntax-check: OK (no syntax errors, no duplicate declarations, no unresolved project symbols, Android-free sources clean, resources consistent)")
+PY

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Runs ContractRoundTrip.kt against a live backend using the app's own DTOs (compiled by tools/core-check).
+#   RT_ID / RT_PW                 an employee account (password already changed) on a DEVELOPMENT database
+#   RT_MANAGER_ID / RT_MANAGER_PW optional manager/admin account for the admin screens
+# Usage: tools/contract-roundtrip/run [base-url]   (default http://127.0.0.1:8000)
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(cd "$HERE/../.." && pwd)"
+KOTLINC_HOME="${KOTLINC_HOME:-/opt/kotlinc}"
+MAIN_OUT="$ROOT/build/core-check/main"
+[ -d "$MAIN_OUT" ] || "$ROOT/tools/core-check" >/dev/null
+SER_JARS="$(ls /opt/gradle*/lib/kotlinx-serialization-core-jvm-*.jar | head -1):$(ls /opt/gradle*/lib/kotlinx-serialization-json-jvm-*.jar | head -1)"
+SER_JARS="${KOTLINX_SERIALIZATION_JARS:-$SER_JARS}"
+OUT="$ROOT/build/contract-roundtrip"; rm -rf "$OUT"; mkdir -p "$OUT"
+"$KOTLINC_HOME/bin/kotlinc" -language-version 2.3 -jvm-target 17 -Xplugin="$KOTLINC_HOME/lib/kotlinx-serialization-compiler-plugin.jar" \
+  -cp "$MAIN_OUT:$SER_JARS" -d "$OUT" "$HERE/ContractRoundTrip.kt" 2>&1 | grep -v "^warning" || true
+"$KOTLINC_HOME/bin/kotlin" -cp "$OUT:$MAIN_OUT:$SER_JARS" ContractRoundTripKt "${1:-http://127.0.0.1:8000}"

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Release/main: TLS only, system CAs only (no user-installed CAs). Certificate pinning is implemented in
+     ApiClientFactory (OkHttp CertificatePinner, disabled until pins are supplied - see docs/android/BUILD-VERIFICATION.md). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

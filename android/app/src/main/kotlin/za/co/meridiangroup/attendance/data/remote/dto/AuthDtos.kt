@@ -1,0 +1,112 @@
+package za.co.meridiangroup.attendance.data.remote.dto
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class DeviceInfoDto(
+    @SerialName("device_id") val deviceId: String,
+    @SerialName("model") val model: String,
+    @SerialName("manufacturer") val manufacturer: String,
+    @SerialName("os_version") val osVersion: String,
+    @SerialName("app_version") val appVersion: String,
+    @SerialName("fcm_token") val fcmToken: String? = null,
+)
+
+@Serializable
+data class LoginRequestDto(
+    @SerialName("identifier") val identifier: String,
+    @SerialName("password") val password: String,
+    @SerialName("device") val device: DeviceInfoDto? = null,
+)
+
+@Serializable
+data class RefreshRequestDto(@SerialName("refresh_token") val refreshToken: String)
+
+@Serializable
+data class LogoutRequestDto(@SerialName("refresh_token") val refreshToken: String)
+
+@Serializable
+data class AuthResponseDto(
+    @SerialName("access_token") val accessToken: String,
+    @SerialName("refresh_token") val refreshToken: String,
+    @SerialName("token_type") val tokenType: String = "bearer",
+    @SerialName("expires_in") val expiresIn: Int = 900,
+    @SerialName("must_change_password") val mustChangePassword: Boolean = false,
+    @SerialName("user") val user: UserDto,
+    @SerialName("device") val device: DeviceDto? = null,
+)
+
+@Serializable
+data class UserDto(
+    @SerialName("id") val id: String,
+    @SerialName("employee_number") val employeeNumber: String = "",
+    @SerialName("first_name") val firstName: String = "",
+    @SerialName("last_name") val lastName: String = "",
+    @SerialName("email") val email: String = "",
+    @SerialName("phone") val phone: String? = null,
+    @SerialName("role") val role: String = "employee",
+    @SerialName("status") val status: String = "active",
+    @SerialName("department") val department: DepartmentDto? = null,
+    @SerialName("must_change_password") val mustChangePassword: Boolean = false,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("last_login_at") val lastLoginAt: String? = null,
+    @SerialName("permissions") val permissions: List<String> = emptyList(),
+    @SerialName("notification_preferences") val notificationPreferences: NotificationPreferencesDto? = null,
+    @SerialName("last_attendance_status") val lastAttendanceStatus: String? = null,
+) {
+    val fullName: String get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+}
+
+@Serializable
+data class NotificationPreferencesDto(@SerialName("push") val push: Boolean = true)
+
+@Serializable
+data class DeviceDto(
+    @SerialName("id") val id: String,
+    @SerialName("device_id") val deviceId: String = "",
+    @SerialName("model") val model: String? = null,
+    @SerialName("manufacturer") val manufacturer: String? = null,
+    @SerialName("os_version") val osVersion: String? = null,
+    @SerialName("app_version") val appVersion: String? = null,
+    @SerialName("status") val status: String = "active",
+    @SerialName("registered_at") val registeredAt: String? = null,
+    @SerialName("last_seen_at") val lastSeenAt: String? = null,
+    @SerialName("integrity_verdict") val integrityVerdict: String? = null,
+)
+
+@Serializable
+data class MeResponseDto(
+    @SerialName("user") val user: UserDto,
+    @SerialName("device") val device: DeviceDto? = null,
+)
+
+@Serializable
+data class PatchMeRequestDto(
+    @SerialName("phone") val phone: String? = null,
+    @SerialName("notification_preferences") val notificationPreferences: NotificationPreferencesDto? = null,
+)
+
+@Serializable
+data class ChangePasswordRequestDto(
+    @SerialName("current_password") val currentPassword: String,
+    @SerialName("new_password") val newPassword: String,
+)
+
+@Serializable
+data class ForgotPasswordRequestDto(@SerialName("identifier") val identifier: String)
+
+@Serializable
+data class ResetPasswordRequestDto(
+    @SerialName("token") val token: String,
+    @SerialName("new_password") val newPassword: String,
+)
+
+@Serializable
+data class FcmTokenRequestDto(@SerialName("fcm_token") val fcmToken: String)
+
+@Serializable
+data class IntegrityRequestDto(@SerialName("integrity_token") val integrityToken: String)
+
+@Serializable
+data class IntegrityResponseDto(@SerialName("verdict") val verdict: String = "unknown")

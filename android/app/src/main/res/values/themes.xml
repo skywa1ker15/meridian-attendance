@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base window theme; Compose draws everything else (ui/theme/Theme.kt). -->
+    <style name="Theme.Meridian" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@color/grey_100</item>
+        <item name="android:colorAccent">@color/navy_700</item>
+    </style>
+
+    <!-- androidx.core:core-splashscreen theme (Android 8-11 backport + Android 12+ system splash). -->
+    <style name="Theme.Meridian.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/navy_700</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.Meridian</item>
+    </style>
+</resources>
