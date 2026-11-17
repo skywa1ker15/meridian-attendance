@@ -57,6 +57,11 @@ jobs:
     name: Unit tests, lint, debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Optional repository variable (Settings → Secrets and variables → Actions → Variables):
+      # the backend address a test phone can reach, e.g. http://192.168.1.50:8000 or https://…
+      # Unset → http://10.0.2.2:8000, which only works in the Android emulator.
+      MERIDIAN_DEBUG_API_BASE_URL: ${{ vars.DEBUG_API_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -76,16 +81,10 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: google-services.json (optional secret)
-        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
         env:
           GS_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: printf '%s' "$GS_JSON" > app/google-services.json
-
-      - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
-
-      - name: Lint
-        run: ./gradlew lintDebug --stacktrace
+        run: |
+          if [ -n "$GS_JSON" ]; then printf '%s' "$GS_JSON" > app/google-services.json; echo "google-services.json written"; else echo "No GOOGLE_SERVICES_JSON secret: building without Firebase push"; fi
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
@@ -96,6 +95,12 @@ jobs:
           name: meridian-attendance-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Lint
+        run: ./gradlew lintDebug --stacktrace
 
       - name: Upload test and lint reports
         if: always()
@@ -156,10 +161,10 @@ jobs:
           cache-read-only: true
 
       - name: google-services.json (optional secret)
-        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
         env:
           GS_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: printf '%s' "$GS_JSON" > app/google-services.json
+        run: |
+          if [ -n "$GS_JSON" ]; then printf '%s' "$GS_JSON" > app/google-services.json; echo "google-services.json written"; else echo "No GOOGLE_SERVICES_JSON secret: building without Firebase push"; fi
 
       - name: Decode keystore and write signing properties
         if: steps.secrets.outputs.signing == 'true'

@@ -21,7 +21,7 @@ env:
 
 jobs:
   test:
-    name: Lint and test (Python ${{ env.PYTHON_VERSION }}, PostgreSQL 16)
+    name: Lint and test (PostgreSQL 16)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
