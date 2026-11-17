@@ -16,7 +16,7 @@ import za.co.meridiangroup.attendance.data.remote.dto.SessionDto
 import za.co.meridiangroup.attendance.data.remote.dto.TodaySummaryDto
 import za.co.meridiangroup.attendance.data.remote.dto.WorkplaceDto
 
-private val json: Json get() = ApiJson.json
+private val mapperJson: Json get() = ApiJson.json
 
 fun WorkplaceDto.toEntity(configVersion: Int) = WorkplaceEntity(
     id = id, name = name, address = address, latitude = latitude, longitude = longitude,
@@ -34,19 +34,19 @@ fun WorkplaceEntity.toGeometry() = WorkplaceGeometry(
 )
 
 fun TodaySummaryDto.toEntity(now: Long) = TodaySummaryEntity(
-    workDate = workDate, json = json.encodeToString(TodaySummaryDto.serializer(), this), fetchedAtMillis = now,
+    workDate = workDate, json = mapperJson.encodeToString(TodaySummaryDto.serializer(), this), fetchedAtMillis = now,
 )
 
 fun TodaySummaryEntity.toDto(): TodaySummaryDto? =
-    runCatching { json.decodeFromString(TodaySummaryDto.serializer(), this.json) }.getOrNull()
+    runCatching { mapperJson.decodeFromString(TodaySummaryDto.serializer(), this.json) }.getOrNull()
 
 fun SessionDto.toEntity(now: Long) = SessionEntity(
-    id = id, workDate = workDate, status = status, json = json.encodeToString(SessionDto.serializer(), this), fetchedAtMillis = now,
+    id = id, workDate = workDate, status = status, json = mapperJson.encodeToString(SessionDto.serializer(), this), fetchedAtMillis = now,
 )
 
-fun SessionEntity.toDto(): SessionDto? = runCatching { json.decodeFromString(SessionDto.serializer(), this.json) }.getOrNull()
+fun SessionEntity.toDto(): SessionDto? = runCatching { mapperJson.decodeFromString(SessionDto.serializer(), this.json) }.getOrNull()
 
-fun EventEntity.serverEvent(): EventDto? = serverJson?.let { runCatching { json.decodeFromString(EventDto.serializer(), it) }.getOrNull() }
+fun EventEntity.serverEvent(): EventDto? = serverJson?.let { runCatching { mapperJson.decodeFromString(EventDto.serializer(), it) }.getOrNull() }
 
 /** Merges a server Event into the local row, keeping local-only signals (Wi-Fi SSID, local verdict). */
 fun EventDto.mergeInto(existing: EventEntity?, now: Long): EventEntity {
@@ -74,7 +74,7 @@ fun EventDto.mergeInto(existing: EventEntity?, now: Long): EventEntity {
         wifiSsid = existing?.wifiSsid,
         wifiMatched = verification?.wifiMatched ?: if (wifiVerified) true else existing?.wifiMatched,
         likelyReview = existing?.likelyReview ?: false,
-        serverJson = json.encodeToString(EventDto.serializer(), this),
+        serverJson = mapperJson.encodeToString(EventDto.serializer(), this),
         createdAtMillis = existing?.createdAtMillis ?: now,
         updatedAtMillis = now,
         lastNotifiedAtMillis = existing?.lastNotifiedAtMillis,
@@ -83,10 +83,10 @@ fun EventDto.mergeInto(existing: EventEntity?, now: Long): EventEntity {
 
 fun NotificationDto.toEntity() = NotificationEntity(
     id = id, type = type, title = title, body = body,
-    dataJson = json.encodeToString(JsonObject.serializer(), JsonObject(data.mapValues { JsonPrimitive(it.value) })),
+    dataJson = mapperJson.encodeToString(JsonObject.serializer(), JsonObject(data.mapValues { JsonPrimitive(it.value) })),
     readAt = readAt, createdAt = createdAt ?: "",
 )
 
 fun NotificationEntity.data(): Map<String, String> = runCatching {
-    json.decodeFromString(JsonObject.serializer(), dataJson).mapValues { (it.value as? JsonPrimitive)?.content ?: it.value.toString() }
+    mapperJson.decodeFromString(JsonObject.serializer(), dataJson).mapValues { (it.value as? JsonPrimitive)?.content ?: it.value.toString() }
 }.getOrDefault(emptyMap())
