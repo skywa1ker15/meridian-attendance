@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -13,7 +14,7 @@ plugins {
 // ---------------------------------------------------------------------------------------------
 // Optional, never committed (see .gitignore): android/keystore.properties with MERIDIAN_KEYSTORE_PATH=…,
 // MERIDIAN_KEYSTORE_PASSWORD=…, MERIDIAN_KEY_ALIAS=…, MERIDIAN_KEY_PASSWORD=… (and optionally MERIDIAN_API_BASE_URL).
-val keystoreProperties = java.util.Properties().apply {
+val keystoreProperties = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
