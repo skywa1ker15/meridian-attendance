@@ -18,6 +18,7 @@ from app.core.security import (
     hash_password,
     validate_password_policy,
 )
+from app.core.validation import normalise_sa_phone
 from app.models import (
     AttendanceEvent,
     AttendanceSession,
@@ -38,8 +39,9 @@ from app.schemas.admin import (
 from app.schemas.attendance import event_dict, request_dict, session_dict
 from app.schemas.auth import device_dict, user_dict
 from app.schemas.common import PageParams
-from app.services import attendance, audit, auth_service, notifications
+from app.services import attendance, audit, auth_service, invitations, notifications
 from app.services import devices as device_service
+from app.services import email as email_service
 
 
 def get_user(db: Session, ref: str) -> User:
@@ -123,32 +125,69 @@ def list_employees(db: Session, params: PageParams, *, search: str | None, depar
     return items, int(total)
 
 
-def create_employee(db: Session, actor: User, data: EmployeeCreateIn, request: Request | None) -> tuple[User, str]:
+def create_employee(db: Session, actor: User, data: EmployeeCreateIn, request: Request | None) -> tuple[User, str | None, dict[str, Any] | None]:
+    """Create an account.
+
+    By default (email configured) the employee is *invited*: no password is set and
+    a one-time link lets them choose their own password and mobile number. Without
+    email — or when the caller passes ``send_invitation: false`` — the old one-time
+    temporary password is issued instead.
+
+    Returns ``(user, temporary_password | None, invitation | None)``.
+    """
     if not can_assign_role(actor.role, data.role):
         raise ApiError(403, "forbidden", f"You are not allowed to assign the role '{data.role}'.")
     _check_unique(db, employee_number=data.employee_number, email=str(data.email))
     dep = _department(db, data.department_id)
-    temp = data.temporary_password or generate_temporary_password()
-    validate_password_policy(temp, [str(data.email), data.employee_number])
+    phone = normalise_sa_phone(data.phone)
+    invite = data.send_invitation if data.send_invitation is not None else email_service.email_configured()
+    if invite and data.temporary_password:
+        raise ApiError(422, "validation_error", "Choose either an invitation or a temporary password, not both.", {"fields": {"temporary_password": "conflicts_with_invitation"}})
+
+    temp: str | None = None
+    if not invite:
+        temp = data.temporary_password or generate_temporary_password()
+        validate_password_policy(temp, [str(data.email), data.employee_number])
     user = User(
         id=uuid.uuid4(),
         employee_number=data.employee_number,
         first_name=data.first_name,
         last_name=data.last_name,
         email=str(data.email),
-        phone=data.phone,
+        phone=phone,
         department_id=dep.id if dep else None,
         role=data.role,
         status="active",
-        password_hash=hash_password(temp),
-        must_change_password=True,
+        password_hash=hash_password(temp) if temp else None,
+        must_change_password=bool(temp),
     )
     db.add(user)
     db.flush()
-    audit.record(db, action="employee.create", actor=actor, entity_type="user", entity_id=user.id, after={"employee_number": user.employee_number, "email": user.email, "role": user.role, "department_id": str(dep.id) if dep else None}, request=request)
+    audit.record(db, action="employee.create", actor=actor, entity_type="user", entity_id=user.id, after={"employee_number": user.employee_number, "email": user.email, "role": user.role, "department_id": str(dep.id) if dep else None, "invited": invite}, request=request)
     db.commit()
     db.refresh(user)
-    return user, temp
+
+    invitation: dict[str, Any] | None = None
+    if invite:
+        sent, expires_at = invitations.issue(db, user, actor, request)
+        invitation = {"sent": sent, "expires_at": timeutil.utc_iso(expires_at)}
+        db.refresh(user)
+    return user, temp, invitation
+
+
+def invite_employee(db: Session, actor: User, ref: str, request: Request | None) -> dict[str, Any]:
+    """(Re-)issue an invitation, invalidating any earlier unused one."""
+    user = get_user(db, ref)
+    if user.erased_at is not None:
+        raise ApiError(400, "invalid_state", "An erased account cannot be invited.")
+    if user.status != "active":
+        raise ApiError(400, "invalid_state", "Reactivate the account before inviting this employee.")
+    if user.password_hash is not None:
+        # The account is already usable; a reset link is the right tool there and it
+        # keeps the existing password working until the employee uses it.
+        raise ApiError(409, "invalid_state", "This employee already has a password. Use reset password instead.")
+    sent, expires_at = invitations.issue(db, user, actor, request, audit_action="employee.invite_resent")
+    return {"sent": sent, "expires_at": timeutil.utc_iso(expires_at)}
 
 
 def update_employee(db: Session, actor: User, ref: str, data: EmployeeUpdateIn, request: Request | None) -> User:
@@ -166,6 +205,8 @@ def update_employee(db: Session, actor: User, ref: str, data: EmployeeUpdateIn, 
         before["department_id"] = str(user.department_id) if user.department_id else None
         user.department_id = None
         changes["department_id"] = None
+    if "phone" in changes:
+        changes["phone"] = normalise_sa_phone(changes["phone"])
     for key in ("employee_number", "first_name", "last_name", "phone"):
         if key in changes:
             setattr(user, key, changes[key])

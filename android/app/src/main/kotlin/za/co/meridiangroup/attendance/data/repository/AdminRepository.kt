@@ -18,6 +18,7 @@ import za.co.meridiangroup.attendance.data.remote.dto.DeviceDto
 import za.co.meridiangroup.attendance.data.remote.dto.EmployeeCreateRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.EmployeeCreatedDto
 import za.co.meridiangroup.attendance.data.remote.dto.EmployeeDetailDto
+import za.co.meridiangroup.attendance.data.remote.dto.InvitationSummaryDto
 import za.co.meridiangroup.attendance.data.remote.dto.EmployeeUpdateRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.EraseRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.EraseResponseDto
@@ -101,6 +102,9 @@ class AdminRepository(
     suspend fun reactivateEmployee(id: String): ApiResult<UserDto> = caller.call { api.adminReactivateEmployee(id) }
 
     suspend fun resetPassword(id: String): ApiResult<TemporaryPasswordDto> = caller.call { api.adminResetPassword(id) }
+
+    /** Emails the employee a fresh invitation link (POST /admin/employees/{id}/invite). */
+    suspend fun resendInvitation(id: String): ApiResult<InvitationSummaryDto> = caller.call { api.adminResendInvitation(id) }
 
     suspend fun changeRole(id: String, role: String): ApiResult<UserDto> = caller.call { api.adminChangeRole(id, RoleRequestDto(role)) }
 

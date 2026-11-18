@@ -41,6 +41,16 @@ interface AttendanceApi {
     @POST("auth/password/forgot")
     suspend fun forgotPassword(@Body body: ForgotPasswordRequestDto): Response<Unit>
 
+    @POST("auth/password/reset")
+    suspend fun resetPassword(@Body body: ResetPasswordRequestDto): Response<Unit>
+
+    /** Invitation links: no authentication, the token in the emailed link is the credential. */
+    @GET("auth/invitation")
+    suspend fun invitation(@Query("token") token: String): Response<InvitationDto>
+
+    @POST("auth/invitation/accept")
+    suspend fun acceptInvitation(@Body body: AcceptInvitationRequestDto): Response<AuthResponseDto>
+
     // ---- 2. Devices ----
     @POST("devices/register")
     suspend fun registerDevice(@Body body: DeviceInfoDto): Response<DeviceDto>
@@ -205,6 +215,9 @@ interface AttendanceApi {
 
     @POST("admin/employees/{id}/reactivate")
     suspend fun adminReactivateEmployee(@Path("id") id: String): Response<UserDto>
+
+    @POST("admin/employees/{id}/invite")
+    suspend fun adminResendInvitation(@Path("id") id: String): Response<InvitationSummaryDto>
 
     @POST("admin/employees/{id}/reset-password")
     suspend fun adminResetPassword(@Path("id") id: String): Response<TemporaryPasswordDto>

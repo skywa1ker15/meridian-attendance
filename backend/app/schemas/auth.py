@@ -48,6 +48,13 @@ class ResetPasswordIn(ApiModel):
     new_password: str = Field(..., min_length=1, max_length=256)
 
 
+class InvitationAcceptIn(ApiModel):
+    token: str = Field(..., min_length=16, max_length=512)
+    phone: str = Field(..., min_length=6, max_length=32)
+    password: str = Field(..., min_length=1, max_length=256)
+    device: DeviceIn | None = None
+
+
 class NotificationPreferencesIn(ApiModel):
     push: bool | None = None
 

@@ -61,6 +61,7 @@ from app.services import (
     reports,
 )
 from app.services import devices as device_service
+from app.services import email as email_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -119,8 +120,16 @@ def list_employees(
 
 @router.post("/employees", status_code=201)
 def create_employee(body: EmployeeCreateIn, request: Request, actor: User = Depends(EMPLOYEES_WRITE), db: Session = Depends(get_db)):
-    user, temp = employees.create_employee(db, actor, body, request)
-    return {"user": user_dict(user), "temporary_password": temp}
+    user, temp, invitation = employees.create_employee(db, actor, body, request)
+    payload: dict = {"user": user_dict(user), "invitation": invitation}
+    if temp is not None:
+        payload["temporary_password"] = temp
+    return payload
+
+
+@router.post("/employees/{employee_id}/invite")
+def invite_employee(employee_id: str, request: Request, actor: User = Depends(EMPLOYEES_WRITE), db: Session = Depends(get_db)):
+    return employees.invite_employee(db, actor, employee_id, request)
 
 
 @router.get("/employees/{employee_id}")
@@ -163,6 +172,25 @@ def export_employee(employee_id: str, request: Request, actor: User = Depends(EM
 def erase_employee(employee_id: str, body: EraseIn, request: Request, actor: User = Depends(SUPERADMIN), db: Session = Depends(get_db)):
     user = employees.erase_employee(db, actor, employee_id, body.confirm_employee_number, body.reason, request)
     return {"status": "erased", "user_id": str(user.id), "erased_at": user.erased_at.isoformat() if user.erased_at else None}
+
+
+# --- email ------------------------------------------------------------------------------
+@router.get("/email/status")
+def email_status(_: User = Depends(EMPLOYEES_WRITE)):
+    return email_service.status()
+
+
+@router.post("/email/test")
+def email_test(request: Request, actor: User = Depends(EMPLOYEES_WRITE), db: Session = Depends(get_db)):
+    """Send a test message to the caller's own address. Rate-limited."""
+    if not email_service.email_configured():
+        return {"sent": False, "detail": "Email is not configured on this server. See docs/EMAIL-SETUP.md."}
+    subject, text_body, html_body = email_service.test_message(first_name=actor.first_name)
+    sent = email_service.send_email(to=actor.email, subject=subject, text_body=text_body, html_body=html_body)
+    audit.record(db, action="email.test", actor=actor, entity_type="user", entity_id=actor.id, after={"sent": sent, "provider": email_service.active_provider()}, request=request)
+    db.commit()
+    detail = f"Test message sent to {actor.email} via {email_service.active_provider()}." if sent else "The email provider rejected the message. Check the server log for the reason."
+    return {"sent": sent, "detail": detail}
 
 
 # --- departments ------------------------------------------------------------------------

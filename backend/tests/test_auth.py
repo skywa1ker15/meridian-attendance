@@ -103,7 +103,7 @@ def test_forgot_always_202_and_reset_flow(client, employee, db, monkeypatch):
     assert not sent
     assert client.post("/api/v1/auth/password/forgot", json={"identifier": employee.email}).status_code == 202
     assert sent["to"] == employee.email
-    token = sent["body"].split("token=")[1].split()[0]
+    token = sent["text_body"].split("token=")[1].split()[0]
     assert db.execute(select(PasswordResetToken)).scalar_one().token_hash != token  # stored hashed
     assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "Brand-New-Secret-42"}).status_code == 204
     assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "Brand-New-Secret-43"}).status_code == 400
@@ -111,9 +111,10 @@ def test_forgot_always_202_and_reset_flow(client, employee, db, monkeypatch):
 
 
 def test_patch_me(client, emp_tokens):
-    r = client.patch("/api/v1/auth/me", json={"phone": "+27 31 000 0000", "notification_preferences": {"push": False}}, headers=auth(emp_tokens))
+    r = client.patch("/api/v1/auth/me", json={"phone": "031 000 0000", "notification_preferences": {"push": False}}, headers=auth(emp_tokens))
     assert r.status_code == 200
-    assert r.json()["phone"] == "+27 31 000 0000" and r.json()["notification_preferences"]["push"] is False
+    # Phone numbers are normalised to E.164 wherever they are accepted.
+    assert r.json()["phone"] == "+27310000000" and r.json()["notification_preferences"]["push"] is False
 
 
 def test_client_cannot_escalate_role_via_patch_me(client, emp_tokens, db, employee):

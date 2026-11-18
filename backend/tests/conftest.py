@@ -32,6 +32,14 @@ os.environ.update(
         "RATE_LIMIT_EVENTS_PER_MINUTE": "10000",
         "RATE_LIMIT_FORGOT_PER_MINUTE": "1000",
         "RATE_LIMIT_REFRESH_PER_MINUTE": "1000",
+        "RATE_LIMIT_EMAIL_TEST_PER_MINUTE": "1000",
+        "EMAIL_PROVIDER": "auto",
+        "MS_GRAPH_TENANT_ID": "",
+        "MS_GRAPH_CLIENT_ID": "",
+        "MS_GRAPH_CLIENT_SECRET": "",
+        "EMAIL_SENDER_ADDRESS": "",
+        "APK_DOWNLOAD_URL": "",
+        "ANDROID_ASSET_LINKS_JSON": "",
     }
 )
 

@@ -80,10 +80,15 @@ data class EmployeeCreateRequestDto(
     @SerialName("temporary_password") val temporaryPassword: String? = null,
 )
 
+/**
+ * `POST /admin/employees` → either a temporary password (when the administrator supplied one) or an
+ * invitation that was emailed to the employee. Exactly one of the two is present.
+ */
 @Serializable
 data class EmployeeCreatedDto(
     @SerialName("user") val user: UserDto,
     @SerialName("temporary_password") val temporaryPassword: String? = null,
+    @SerialName("invitation") val invitation: InvitationSummaryDto? = null,
 )
 
 /** PATCH /admin/employees/{id}: null fields are omitted (ApiJson.explicitNulls = false). */

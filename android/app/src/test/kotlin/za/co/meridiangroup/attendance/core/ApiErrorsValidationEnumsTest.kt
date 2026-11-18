@@ -17,6 +17,9 @@ class ApiErrorsValidationEnumsTest {
         assertFalse(ApiErrorMapper.requiresLogout(401, "token_expired"))
         assertFalse(ApiErrorMapper.requiresLogout(401, "invalid_credentials"))
         assertFalse(ApiErrorMapper.requiresLogout(403, "forbidden"))
+        // An expired invitation / reset link (400 token_invalid) must not sign anybody out.
+        assertFalse(ApiErrorMapper.requiresLogout(400, "token_invalid"))
+        assertFalse(ApiErrorMapper.requiresLogout(401, "invitation_pending"))
     }
 
     @Test

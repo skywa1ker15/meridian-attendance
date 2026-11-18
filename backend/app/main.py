@@ -2,16 +2,18 @@
 from __future__ import annotations
 
 import hmac
+import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import text
 
 from app.api.v1.router import api_router
+from app.core import deeplinks
 from app.core.config import Settings, get_settings
 from app.core.errors import ApiError, install_error_handlers
 from app.core.logging import configure_logging
@@ -149,6 +151,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if path and candidate.is_relative_to(base) and candidate.is_file():
                 return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
             return FileResponse(base / "index.html", headers={"Cache-Control": "no-cache"})
+
+    # --- deep links (invitation / password reset emails) ---------------------------------
+    @app.get("/app/invite", include_in_schema=False)
+    def app_invite(token: str = ""):
+        return HTMLResponse(deeplinks.invite_page(token, settings), headers={"Cache-Control": "no-store"})
+
+    @app.get("/app/reset", include_in_schema=False)
+    def app_reset(token: str = ""):
+        return HTMLResponse(deeplinks.reset_page(token, settings), headers={"Cache-Control": "no-store"})
+
+    @app.get("/.well-known/assetlinks.json", include_in_schema=False)
+    def asset_links():
+        raw = (settings.android_asset_links_json or "").strip()
+        if not raw:
+            raise ApiError(404, "not_found", "Android asset links are not configured on this server.")
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            log.error("ANDROID_ASSET_LINKS_JSON is not valid JSON; serving 404")
+            raise ApiError(404, "not_found", "Android asset links are not configured on this server.") from None
+        return JSONResponse(payload, headers={"Cache-Control": "public, max-age=3600"})
 
     @app.get("/", include_in_schema=False)
     def root():

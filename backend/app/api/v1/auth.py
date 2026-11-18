@@ -1,14 +1,16 @@
 """/auth — login, refresh, logout, profile, password management."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_device, get_current_user, get_db
+from app.core.validation import normalise_sa_phone
 from app.models import Device, User
 from app.schemas.auth import (
     ChangePasswordIn,
     ForgotPasswordIn,
+    InvitationAcceptIn,
     LoginIn,
     LogoutIn,
     RefreshIn,
@@ -17,7 +19,7 @@ from app.schemas.auth import (
     device_dict,
     user_dict,
 )
-from app.services import audit, auth_service
+from app.services import audit, auth_service, invitations
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -25,6 +27,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login")
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     return auth_service.login(db, body.identifier, body.password, body.device, request)
+
+
+@router.get("/invitation")
+def invitation_details(token: str = Query(..., min_length=16, max_length=512), db: Session = Depends(get_db)):
+    """What the invited employee sees before activating. Reveals nothing for a bad token."""
+    return invitations.details(db, token)
+
+
+@router.post("/invitation/accept", status_code=201)
+def accept_invitation(body: InvitationAcceptIn, request: Request, db: Session = Depends(get_db)):
+    return invitations.accept(db, body.token, body.phone, body.password, body.device, request)
 
 
 @router.post("/refresh")
@@ -49,7 +62,7 @@ def update_me(body: UpdateMeIn, request: Request, user: User = Depends(get_curre
     changes = body.model_dump(exclude_unset=True)
     before = {"phone": user.phone, "notification_push": user.notification_push}
     if "phone" in changes:
-        user.phone = changes["phone"]
+        user.phone = normalise_sa_phone(changes["phone"])
     if body.notification_preferences is not None and body.notification_preferences.push is not None:
         user.notification_push = body.notification_preferences.push
     audit.record(db, action="profile.update", actor=user, entity_type="user", entity_id=user.id, before=before, after={"phone": user.phone, "notification_push": user.notification_push}, request=request)

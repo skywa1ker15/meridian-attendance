@@ -106,6 +106,42 @@ data class ResetPasswordRequestDto(
     @SerialName("new_password") val newPassword: String,
 )
 
+// ---- §1 Invitations (HR invites; the employee sets their own password) ----
+
+/** `GET /auth/invitation?token=…` — who the invitation is for. No authentication. */
+@Serializable
+data class InvitationDto(
+    @SerialName("employee_number") val employeeNumber: String = "",
+    @SerialName("first_name") val firstName: String = "",
+    @SerialName("last_name") val lastName: String = "",
+    @SerialName("email") val email: String = "",
+    @SerialName("phone") val phone: String? = null,
+    @SerialName("department") val department: DepartmentDto? = null,
+    @SerialName("expires_at") val expiresAt: String? = null,
+) {
+    val fullName: String get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+}
+
+/** `POST /auth/invitation/accept` → the same body as `POST /auth/login`. */
+@Serializable
+data class AcceptInvitationRequestDto(
+    @SerialName("token") val token: String,
+    @SerialName("phone") val phone: String,
+    @SerialName("password") val password: String,
+    @SerialName("device") val device: DeviceInfoDto? = null,
+)
+
+/**
+ * The invitation an administrator triggers (`POST /admin/employees` without a temporary password,
+ * `POST /admin/employees/{id}/invite`). Every field is optional: the app only reports what it is given.
+ */
+@Serializable
+data class InvitationSummaryDto(
+    @SerialName("email") val email: String? = null,
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("sent") val sent: Boolean? = null,
+)
+
 @Serializable
 data class FcmTokenRequestDto(@SerialName("fcm_token") val fcmToken: String)
 

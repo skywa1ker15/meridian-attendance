@@ -187,3 +187,52 @@ class DtoContractTest {
         assertTrue(ApiErrorParser.parse(401, """{"error":{"code":"token_reused","message":""}}""").requiresLogout)
     }
 }
+
+/** §1 invitations: the contract the backend agent is building (GET /auth/invitation, accept, admin invite). */
+class InvitationDtoContractTest {
+    private val json = ApiJson.json
+
+    @Test
+    fun parsesAnInvitation() {
+        val dto = json.decodeFromString(
+            za.co.meridiangroup.attendance.data.remote.dto.InvitationDto.serializer(),
+            """{"employee_number":"MG-0042","first_name":"Thembi","last_name":"Ndlovu",
+               "email":"t.ndlovu@meridiangroup.co.za","phone":null,
+               "department":{"id":"dep-1","name":"Operations"},"expires_at":"2026-11-20T08:00:00Z"}""",
+        )
+        assertEquals("Thembi Ndlovu", dto.fullName)
+        assertNull(dto.phone)
+        assertEquals("Operations", dto.department?.name)
+        assertEquals("2026-11-20T08:00:00Z", dto.expiresAt)
+    }
+
+    @Test
+    fun acceptBodyMatchesContract() {
+        val body = za.co.meridiangroup.attendance.data.remote.dto.AcceptInvitationRequestDto(
+            token = "tok", phone = "+27821234567", password = "Thembi-Rides-2026",
+            device = DeviceInfoDto("dev-1", "SM-A546B", "samsung", "14", "1.0.0 (1)", null),
+        )
+        val obj = json.parseToJsonElement(
+            json.encodeToString(za.co.meridiangroup.attendance.data.remote.dto.AcceptInvitationRequestDto.serializer(), body),
+        ).jsonObject
+        assertEquals(setOf("token", "phone", "password", "device"), obj.keys)
+        assertEquals("+27821234567", obj["phone"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun createdEmployeeCarriesEitherSecretOrInvitation() {
+        val invited = json.decodeFromString(
+            za.co.meridiangroup.attendance.data.remote.dto.EmployeeCreatedDto.serializer(),
+            """{"user":{"id":"u1","employee_number":"MG-0042","email":"t.ndlovu@meridiangroup.co.za"},
+               "invitation":{"email":"t.ndlovu@meridiangroup.co.za","expires_at":"2026-11-20T08:00:00Z","sent":true}}""",
+        )
+        assertNull(invited.temporaryPassword)
+        assertEquals(true, invited.invitation?.sent)
+        val withPassword = json.decodeFromString(
+            za.co.meridiangroup.attendance.data.remote.dto.EmployeeCreatedDto.serializer(),
+            """{"user":{"id":"u1"},"temporary_password":"Temp-1234-abcd"}""",
+        )
+        assertNull(withPassword.invitation)
+        assertEquals("Temp-1234-abcd", withPassword.temporaryPassword)
+    }
+}

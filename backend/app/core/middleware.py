@@ -114,6 +114,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return "login", s.rate_limit_login_per_minute
         if path.endswith("/auth/password/forgot") or path.endswith("/auth/password/reset"):
             return "forgot", s.rate_limit_forgot_per_minute
+        if path.endswith("/auth/invitation/accept") or path.endswith("/auth/invitation"):
+            return "forgot", s.rate_limit_forgot_per_minute
+        if path.endswith("/admin/email/test"):
+            return "email_test", s.rate_limit_email_test_per_minute
         if path.endswith("/auth/refresh"):
             return "refresh", s.rate_limit_refresh_per_minute
         if "/attendance/events" in path or path.endswith("/attendance/sync"):

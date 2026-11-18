@@ -84,6 +84,16 @@ def login(db: Session, identifier: str, password: str, device_in: DeviceIn | Non
         retry = int((user.locked_until - now).total_seconds()) + 1
         raise ApiError(423, "account_locked", "Too many failed attempts. Try again later.", {"retry_after": retry}, headers={"Retry-After": str(retry)})
 
+    if user.password_hash is None:
+        # The account was created by invitation and has never been activated. Telling the
+        # caller so does reveal that the identifier exists — but they had to know the exact
+        # email or employee number to get here, which the bad-password path already confirms
+        # only by timing. The alternative (a generic "wrong password" for an account that has
+        # no password) sends employees to the helpdesk, so the trade-off is deliberate.
+        audit.record(db, action="auth.login_failed", actor=None, entity_type="user", entity_id=user.id, after={"reason": "invitation_pending"}, request=request)
+        db.commit()
+        raise ApiError(401, "invitation_pending", "Your account hasn't been set up yet. Open the invitation link we emailed you, or ask your manager to resend it.")
+
     if not verify_password(password, user.password_hash):
         user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
         reason = "bad_password"
@@ -205,15 +215,8 @@ def forgot_password(db: Session, identifier: str, request: Request | None) -> No
     audit.record(db, action="auth.password_reset_requested", actor=None, entity_type="user", entity_id=user.id, request=request)
     db.commit()
     link = settings.password_reset_url_template.format(public_base_url=settings.public_base_url.rstrip("/"), token=raw)
-    email_service.send_email(
-        to=user.email,
-        subject="Meridian Attendance — password reset",
-        body=(
-            f"Hello {user.first_name},\n\nA password reset was requested for your Meridian Attendance account.\n"
-            f"Open the link below within {settings.password_reset_minutes} minutes to choose a new password:\n\n{link}\n\n"
-            "If you did not request this, you can ignore this email.\n"
-        ),
-    )
+    subject, text_body, html_body = email_service.password_reset_message(first_name=user.first_name, link=link, expiry_minutes=settings.password_reset_minutes)
+    email_service.send_email(to=user.email, subject=subject, text_body=text_body, html_body=html_body)
 
 
 def reset_password(db: Session, raw_token: str, new_password: str, request: Request | None) -> None:

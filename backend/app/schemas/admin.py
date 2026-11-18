@@ -35,6 +35,9 @@ class EmployeeCreateIn(ApiModel):
     department_id: str | None = None
     role: Literal["employee", "manager", "admin", "superadmin"] = "employee"
     temporary_password: str | None = Field(None, min_length=1, max_length=256)
+    # None = decide server-side: invite when email sending is configured, otherwise
+    # fall back to a one-time temporary password.
+    send_invitation: bool | None = None
 
 
 class EmployeeUpdateIn(ApiModel):

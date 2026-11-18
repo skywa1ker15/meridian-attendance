@@ -43,9 +43,19 @@ object ApiErrorMapper {
 
     private val logoutCodes = setOf("token_reused", "token_invalid", "device_revoked", "account_inactive")
 
-    /** Codes that mean the device must drop its session and show the login screen. */
-    fun requiresLogout(httpStatus: Int, code: String): Boolean =
-        code in logoutCodes || (httpStatus == 401 && code != "token_expired" && code != "invalid_credentials")
+    /** Login-time codes that say something about the account, not about this device's session. */
+    private val sessionlessCodes = setOf("invalid_credentials", "token_expired", "invitation_pending")
+
+    /**
+     * Codes that mean the device must drop its session and show the login screen.
+     * Only 401/403 answers can do that: an invitation or reset link that has expired also answers
+     * `token_invalid`, but with 400, and must never sign an administrator out mid-session.
+     */
+    fun requiresLogout(httpStatus: Int, code: String): Boolean {
+        if (code in sessionlessCodes) return false
+        if (httpStatus != 401 && httpStatus != 403) return false
+        return code in logoutCodes || httpStatus == 401
+    }
 
     fun isRetryable(httpStatus: Int): Boolean = httpStatus == 408 || httpStatus == 429 || httpStatus >= 500
 
@@ -58,7 +68,12 @@ object ApiErrorMapper {
             "device_revoked" -> "This device has been revoked. Please sign in again or contact an administrator."
             "device_pending_approval" -> "This device is waiting for administrator approval."
             "password_change_required" -> "You must change your password before continuing."
-            "token_expired", "token_invalid", "token_reused" -> "Your session has expired. Please sign in again."
+            "invitation_pending" ->
+                "You haven't set a password yet. Open the invitation link we emailed you to finish setting up your account."
+            "token_invalid" ->
+                if (failure.httpStatus == 400) "That link is no longer valid. Ask your manager to send a new one."
+                else "Your session has expired. Please sign in again."
+            "token_expired", "token_reused" -> "Your session has expired. Please sign in again."
             "forbidden" -> "You don't have permission to do that."
             "not_found" -> "That record no longer exists."
             "invalid_state" -> failure.message.ifBlank { "This action is no longer possible for this record." }

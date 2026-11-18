@@ -12,17 +12,20 @@ import za.co.meridiangroup.attendance.data.local.TokenPair
 import za.co.meridiangroup.attendance.data.local.TokenStore
 import za.co.meridiangroup.attendance.data.remote.ApiCaller
 import za.co.meridiangroup.attendance.data.remote.AttendanceApi
+import za.co.meridiangroup.attendance.data.remote.dto.AcceptInvitationRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.AuthResponseDto
 import za.co.meridiangroup.attendance.data.remote.dto.ChangePasswordRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.DeviceDto
 import za.co.meridiangroup.attendance.data.remote.dto.DeviceInfoDto
 import za.co.meridiangroup.attendance.data.remote.dto.FirstAdminRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.ForgotPasswordRequestDto
+import za.co.meridiangroup.attendance.data.remote.dto.InvitationDto
 import za.co.meridiangroup.attendance.data.remote.dto.LoginRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.LogoutRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.MeResponseDto
 import za.co.meridiangroup.attendance.data.remote.dto.NotificationPreferencesDto
 import za.co.meridiangroup.attendance.data.remote.dto.PatchMeRequestDto
+import za.co.meridiangroup.attendance.data.remote.dto.ResetPasswordRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.SetupStatusDto
 import za.co.meridiangroup.attendance.data.remote.dto.UserDto
 
@@ -90,6 +93,31 @@ class AuthRepository(
 
     suspend fun forgotPassword(identifier: String): ApiResult<Unit> =
         caller.call { api.forgotPassword(ForgotPasswordRequestDto(identifier.trim())) }
+
+    /** §1 GET /auth/invitation?token=… — who an emailed invitation is for. No session needed. */
+    suspend fun invitation(token: String): ApiResult<InvitationDto> = caller.call { api.invitation(token) }
+
+    /**
+     * §1 POST /auth/invitation/accept — the employee sets their own password and phone number.
+     * The response is the login response, so tokens and the cached user are stored exactly as after [login].
+     */
+    suspend fun acceptInvitation(token: String, phone: String, password: String): ApiResult<AuthResponseDto> {
+        val result = caller.call {
+            api.acceptInvitation(AcceptInvitationRequestDto(token, phone, password, deviceInfo(prefs.fcmToken())))
+        }
+        if (result is ApiResult.Success) onAuthenticated(result.value)
+        return result
+    }
+
+    /**
+     * §1 POST /auth/password/reset — the server revokes every session, so any local one is dropped too
+     * and the user signs in again with the new password.
+     */
+    suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> {
+        val r = caller.call { api.resetPassword(ResetPasswordRequestDto(token, newPassword)) }
+        if (r is ApiResult.Success && tokenStore.isLoggedIn) wipe()
+        return r
+    }
 
     suspend fun changePassword(current: String, new: String): ApiResult<Unit> {
         val r = caller.call { api.changePassword(ChangePasswordRequestDto(current, new)) }

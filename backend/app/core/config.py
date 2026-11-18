@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     rate_limit_forgot_per_minute: int = 5
     rate_limit_refresh_per_minute: int = 30
     rate_limit_events_per_minute: int = 60
+    rate_limit_email_test_per_minute: int = 3
 
     # --- scheduler -----------------------------------------------------------
     scheduler_enabled: bool = True
@@ -79,14 +80,33 @@ class Settings(BaseSettings):
     play_integrity_package_name: str = "za.co.meridiangroup.attendance"
     play_integrity_service_account_file: str | None = None
 
-    # --- email (password reset) ----------------------------------------------
+    # --- email (invitations, password reset) ---------------------------------
+    # Microsoft disables SMTP basic authentication by default for existing tenants at the
+    # end of December 2026 and newer tenants cannot enable it at all, so Microsoft Graph
+    # (application permission Mail.Send) is the primary path for Meridian's Microsoft 365.
+    # "auto" = Graph when it is configured, otherwise SMTP when it is, otherwise nothing.
+    email_provider: Literal["auto", "graph", "smtp", "none"] = "auto"
+    ms_graph_tenant_id: str | None = None
+    ms_graph_client_id: str | None = None
+    ms_graph_client_secret: str | None = None
+    email_sender_address: str | None = None  # the mailbox Graph sends as
+    email_sender_name: str = "Meridian Attendance"
+    email_timeout_seconds: float = 15.0
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_username: str | None = None
     smtp_password: str | None = None
     smtp_use_tls: bool = True
     smtp_from: str = "attendance@meridiangroup.co.za"
-    password_reset_url_template: str = "{public_base_url}/admin/#/reset-password?token={token}"
+    password_reset_url_template: str = "{public_base_url}/app/reset?token={token}"
+    invitation_url_template: str = "{public_base_url}/app/invite?token={token}"
+    invitation_expiry_days: int = 7
+
+    # --- Android deep links ---------------------------------------------------
+    # Raw JSON served at /.well-known/assetlinks.json so Android can verify App Links.
+    android_asset_links_json: str = ""
+    apk_download_url: str | None = None
+    android_package_name: str = "za.co.meridiangroup.attendance"
 
     # --- observability -------------------------------------------------------
     sentry_dsn: str | None = None
