@@ -110,7 +110,7 @@ class AppGraph(
     val configRepository = ConfigRepository(api, apiCaller, db.workplaceDao(), prefs, geofenceRegistrar, now)
     val notificationRepository = NotificationRepository(api, apiCaller, db.notificationDao(), now)
     val requestRepository = RequestRepository(api, apiCaller, outboxWriter)
-    val adminRepository = AdminRepository(api, apiCaller)
+    val adminRepository = AdminRepository(api, apiCaller, exportStore)
     val reminderScheduler = ReminderScheduler(appContext, prefs, db.eventDao())
     val fcmTokenManager = FcmTokenManager(appContext, prefs, tokenStore, outboxWriter)
     val syncEngine = SyncEngine(api, apiCaller, db, attendanceRepository, notificationRepository, prefs, notifier, now)

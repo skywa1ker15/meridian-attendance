@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
@@ -50,11 +51,18 @@ import androidx.navigation.navDeepLink
 import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.ServerPermissions
 import za.co.meridiangroup.attendance.data.repository.SessionState
-import za.co.meridiangroup.attendance.ui.admin.AdminHomeScreen
-import za.co.meridiangroup.attendance.ui.admin.AdminReviewScreen
-import za.co.meridiangroup.attendance.ui.admin.AdminReviewViewModel
-import za.co.meridiangroup.attendance.ui.admin.LiveAttendanceScreen
-import za.co.meridiangroup.attendance.ui.admin.LiveAttendanceViewModel
+import za.co.meridiangroup.attendance.ui.admin.NoPermission
+import za.co.meridiangroup.attendance.ui.admin.employees.EmployeeProfileScreen
+import za.co.meridiangroup.attendance.ui.admin.employees.EmployeeProfileViewModel
+import za.co.meridiangroup.attendance.ui.admin.employees.EmployeesScreen
+import za.co.meridiangroup.attendance.ui.admin.employees.EmployeesViewModel
+import za.co.meridiangroup.attendance.ui.admin.live.LiveAttendanceScreen
+import za.co.meridiangroup.attendance.ui.admin.live.LiveAttendanceViewModel
+import za.co.meridiangroup.attendance.ui.admin.overview.ManageActions
+import za.co.meridiangroup.attendance.ui.admin.overview.ManageHomeScreen
+import za.co.meridiangroup.attendance.ui.admin.overview.ManageHomeViewModel
+import za.co.meridiangroup.attendance.ui.admin.review.AdminReviewScreen
+import za.co.meridiangroup.attendance.ui.admin.review.AdminReviewViewModel
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordScreen
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordViewModel
 import za.co.meridiangroup.attendance.ui.auth.LoginScreen
@@ -94,9 +102,25 @@ object Routes {
     const val PROFILE_CORRECTION = "profile/correction"
     const val CHANGE_PASSWORD = "profile/password"
     const val ONBOARDING = "onboarding"
-    const val ADMIN = "admin"
-    const val ADMIN_REVIEW = "admin/review"
-    const val ADMIN_LIVE = "admin/live"
+    const val MANAGE = "manage"
+    const val MANAGE_EMPLOYEES = "manage/employees"
+    const val MANAGE_EMPLOYEE = "manage/employees/{id}"
+    const val MANAGE_LIVE = "manage/live"
+    const val MANAGE_RECORDS = "manage/records"
+    const val MANAGE_SESSION = "manage/records/{id}"
+    const val MANAGE_REVIEW = "manage/review"
+    const val MANAGE_EXCEPTIONS = "manage/exceptions"
+    const val MANAGE_REPORTS = "manage/reports"
+    const val MANAGE_WORKPLACES = "manage/workplaces"
+    const val MANAGE_POLICY = "manage/policy"
+    const val MANAGE_DEPARTMENTS = "manage/departments"
+    const val MANAGE_DEVICES = "manage/devices"
+    const val MANAGE_ROLES = "manage/roles"
+    const val MANAGE_AUDIT = "manage/audit"
+    const val MANAGE_BROADCAST = "manage/broadcast"
+
+    fun manageEmployee(id: String) = "manage/employees/${Uri.encode(id)}"
+    fun manageSession(id: String) = "manage/records/${Uri.encode(id)}"
 
     fun confirm(ref: String) = "confirm/${Uri.encode(ref)}"
     fun session(id: String) = "session/${Uri.encode(id)}"
@@ -106,11 +130,23 @@ object Routes {
 
 private data class Tab(val route: String, val label: Int, val icon: ImageVector)
 
-private val tabs = listOf(
+private val employeeTabs = listOf(
     Tab(Routes.HOME, R.string.nav_home, Icons.Outlined.Home),
     Tab(Routes.HISTORY, R.string.nav_history, Icons.Outlined.History),
     Tab(Routes.REQUESTS, R.string.nav_requests, Icons.Outlined.EditNote),
     Tab(Routes.NOTIFICATIONS, R.string.nav_notifications, Icons.Outlined.Notifications),
+    Tab(Routes.PROFILE, R.string.nav_profile, Icons.Outlined.Person),
+)
+
+/**
+ * Managers/administrators get a "Manage" tab. They keep Home/History/Requests because an administrator is
+ * usually an employee too; notifications stay reachable from the dashboard and Manage home bells.
+ */
+private val managerTabs = listOf(
+    Tab(Routes.MANAGE, R.string.nav_manage, Icons.Outlined.AdminPanelSettings),
+    Tab(Routes.HOME, R.string.nav_home, Icons.Outlined.Home),
+    Tab(Routes.HISTORY, R.string.nav_history, Icons.Outlined.History),
+    Tab(Routes.REQUESTS, R.string.nav_requests, Icons.Outlined.EditNote),
     Tab(Routes.PROFILE, R.string.nav_profile, Icons.Outlined.Person),
 )
 
@@ -162,7 +198,27 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
     val unread by graph.notificationRepository.unreadCount.collectAsState(initial = 0)
     val user by graph.prefs.userFlow.collectAsState(initial = null)
     val permissions = user?.permissions.orEmpty()
+    val isManager = ServerPermissions.hasAdminSection(permissions)
+    val tabs = if (isManager) managerTabs else employeeTabs
     val isTab = tabs.any { it.route == current }
+    val manageActions = remember(nav) {
+        ManageActions(
+            onEmployees = { nav.navigate(Routes.MANAGE_EMPLOYEES) },
+            onLive = { nav.navigate(Routes.MANAGE_LIVE) },
+            onRecords = { nav.navigate(Routes.MANAGE_RECORDS) },
+            onReview = { nav.navigate(Routes.MANAGE_REVIEW) },
+            onExceptions = { nav.navigate(Routes.MANAGE_EXCEPTIONS) },
+            onReports = { nav.navigate(Routes.MANAGE_REPORTS) },
+            onWorkplaces = { nav.navigate(Routes.MANAGE_WORKPLACES) },
+            onPolicy = { nav.navigate(Routes.MANAGE_POLICY) },
+            onDepartments = { nav.navigate(Routes.MANAGE_DEPARTMENTS) },
+            onDevices = { nav.navigate(Routes.MANAGE_DEVICES) },
+            onRoles = { nav.navigate(Routes.MANAGE_ROLES) },
+            onAudit = { nav.navigate(Routes.MANAGE_AUDIT) },
+            onBroadcast = { nav.navigate(Routes.MANAGE_BROADCAST) },
+            onNotifications = { nav.navigate(Routes.NOTIFICATIONS) },
+        )
+    }
 
     LaunchedEffect(pendingDeepLink) {
         if (pendingDeepLink != null) {
@@ -208,7 +264,7 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = Routes.HOME, modifier = Modifier.padding(padding)) {
+        NavHost(nav, startDestination = if (isManager) Routes.MANAGE else Routes.HOME, modifier = Modifier.padding(padding)) {
             composable(Routes.HOME, deepLinks = listOf(navDeepLink { uriPattern = DeepLinks.DASHBOARD })) {
                 DashboardScreen(
                     viewModel = graphViewModel { DashboardViewModel(it) },
@@ -217,7 +273,7 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
                     onOpenHistory = { nav.navigateTab(Routes.HISTORY) },
                     onOpenNotifications = { nav.navigateTab(Routes.NOTIFICATIONS) },
                     onOpenOnboarding = { nav.navigate(Routes.ONBOARDING) },
-                    onOpenAdmin = { nav.navigate(Routes.ADMIN) },
+                    onOpenAdmin = { nav.navigate(Routes.MANAGE) },
                     onOpenLocationSettings = { context.startActivity(graph.permissionChecker.locationSettingsIntent()) },
                 )
             }
@@ -290,22 +346,45 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
             composable(Routes.ONBOARDING, deepLinks = listOf(navDeepLink { uriPattern = DeepLinks.ONBOARDING })) {
                 OnboardingScreen(onFinished = { if (!nav.popBackStack()) nav.navigate(Routes.HOME) })
             }
-            composable(Routes.ADMIN) {
-                AdminHomeScreen(
-                    canReview = ServerPermissions.canReview(permissions), canViewLive = ServerPermissions.canViewLive(permissions),
-                    onReview = { nav.navigate(Routes.ADMIN_REVIEW) }, onLive = { nav.navigate(Routes.ADMIN_LIVE) },
+            composable(Routes.MANAGE) {
+                ManageHomeScreen(
+                    viewModel = graphViewModel(key = "manage-home") { ManageHomeViewModel(it) },
+                    permissions = permissions,
+                    unread = unread,
+                    actions = manageActions,
                 )
             }
-            composable(Routes.ADMIN_REVIEW) {
-                if (ServerPermissions.canReview(permissions)) AdminReviewScreen(graphViewModel { AdminReviewViewModel(it.adminRepository) })
-                else AdminHomeScreen(false, ServerPermissions.canViewLive(permissions), {}, { nav.navigate(Routes.ADMIN_LIVE) })
+            composable(Routes.MANAGE_EMPLOYEES) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    EmployeesScreen(graphViewModel(key = "employees") { EmployeesViewModel(it.adminRepository) }, permissions) { id ->
+                        nav.navigate(Routes.manageEmployee(id))
+                    }
+                }
             }
-            composable(Routes.ADMIN_LIVE) {
-                if (ServerPermissions.canViewLive(permissions)) LiveAttendanceScreen(graphViewModel { LiveAttendanceViewModel(it.adminRepository) })
-                else AdminHomeScreen(ServerPermissions.canReview(permissions), false, { nav.navigate(Routes.ADMIN_REVIEW) }, {})
+            composable(Routes.MANAGE_EMPLOYEE, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                Gated(ServerPermissions.canRead(permissions)) {
+                    EmployeeProfileScreen(graphViewModel(key = "employee-$id") { EmployeeProfileViewModel(it, id) }, permissions)
+                }
+            }
+            composable(Routes.MANAGE_LIVE) {
+                Gated(ServerPermissions.canViewLive(permissions)) {
+                    LiveAttendanceScreen(graphViewModel(key = "live") { LiveAttendanceViewModel(it.adminRepository) })
+                }
+            }
+            composable(Routes.MANAGE_REVIEW) {
+                Gated(ServerPermissions.canReview(permissions)) {
+                    AdminReviewScreen(graphViewModel(key = "review") { AdminReviewViewModel(it.adminRepository) })
+                }
             }
         }
     }
+}
+
+/** Renders [content] only when the server granted the permission; otherwise an explanatory empty state. */
+@Composable
+private fun Gated(allowed: Boolean, content: @Composable () -> Unit) {
+    if (allowed) content() else NoPermission()
 }
 
 private fun NavHostController.navigateTab(route: String) {

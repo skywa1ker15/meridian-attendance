@@ -346,4 +346,117 @@
     <string name="setup_back_to_login">Back to sign in</string>
     <string name="setup_note">First-time setup closes permanently once an administrator exists. Everything you do here is audit-logged.</string>
     <string name="setup_notice_title">Setup</string>
+    <!-- Manage section -->
+    <string name="nav_manage">Manage</string>
+    <string name="manage_title">Manage</string>
+    <string name="manage_date">Day</string>
+    <string name="manage_sections">Sections</string>
+    <string name="manage_overview_failed">Couldn\'t load the overview</string>
+    <string name="manage_total">Employees</string>
+    <string name="manage_absent">Absent</string>
+    <string name="manage_late">Late arrivals</string>
+    <string name="manage_pending_confirmations">Pending confirmations</string>
+    <string name="manage_under_review">Under review</string>
+    <string name="manage_exceptions">Exceptions</string>
+    <string name="manage_pending_requests">Pending requests</string>
+    <string name="manage_pending_devices">Devices to approve</string>
+    <string name="manage_departments_today">Departments today</string>
+    <string name="manage_recent_activity">Recent activity</string>
+    <string name="manage_audit_note">Everything you do here is recorded in the audit log.</string>
+    <string name="manage_employees">Employees</string>
+    <string name="manage_employees_body">Directory, new accounts, roles, devices and personal data.</string>
+    <string name="manage_employees_count">%1$d shown</string>
+    <string name="manage_records">Attendance records</string>
+    <string name="manage_records_body">Sessions, corrections and manual sessions.</string>
+    <string name="manage_review">Review queue</string>
+    <string name="manage_review_body">Detections that need a decision and manual requests.</string>
+    <string name="manage_exceptions_body">Missing clock-outs, late arrivals, absences and more.</string>
+    <string name="manage_reports">Reports</string>
+    <string name="manage_reports_body">Preview and export CSV, Excel or PDF.</string>
+    <string name="manage_workplaces">Workplaces</string>
+    <string name="manage_workplaces_body">Location, radius, Wi-Fi verification and detection settings.</string>
+    <string name="manage_policy">Attendance policy</string>
+    <string name="manage_policy_body">Working hours, lateness, retention and device rules.</string>
+    <string name="manage_departments">Departments</string>
+    <string name="manage_departments_body">Create and edit departments.</string>
+    <string name="manage_devices">Devices</string>
+    <string name="manage_devices_body">Approve or revoke the phones that may record attendance.</string>
+    <string name="manage_roles">Roles &amp; permissions</string>
+    <string name="manage_roles_body">What each role may do, and who has it.</string>
+    <string name="manage_audit">Audit log</string>
+    <string name="manage_audit_body">Every administrative change, with before and after.</string>
+    <string name="manage_broadcast">Send a notification</string>
+    <string name="manage_broadcast_body">Notify everyone or one department.</string>
+    <string name="manage_setup_offer_title">Set up your workplace</string>
+    <string name="manage_setup_offer_body">Add your office location so the app can detect arrivals and departures.</string>
+    <string name="manage_setup_offer_action">Set up workplace</string>
+    <string name="manage_unconfirmed_title">Workplace coordinates not confirmed</string>
+    <string name="manage_unconfirmed_body">Detection stays off until the real coordinates are set and confirmed.</string>
+    <string name="manage_unconfirmed_action">Open workplaces</string>
+
+    <!-- Shared admin UI -->
+    <string name="action_pick">Pick</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_share">Share</string>
+    <string name="filter_all">All</string>
+    <string name="filter_all_departments">All departments</string>
+    <string name="filter_all_roles">All roles</string>
+    <string name="status_active">Active</string>
+    <string name="status_inactive">Inactive</string>
+    <string name="admin_note_optional">Optional. Recorded in the audit log.</string>
+    <string name="admin_secret_warning">This is shown once. Share it with the employee over a secure channel; they must change it at first sign-in.</string>
+
+    <!-- Employees -->
+    <string name="employees_new">New employee</string>
+    <string name="employees_search">Search name, number or email</string>
+    <string name="employees_empty_title">No employees found</string>
+    <string name="employees_empty_body">Try a different search or filter.</string>
+    <string name="employees_no_department">No department</string>
+    <string name="employees_temp_password_note">A one-time temporary password is created; the employee must change it at first sign-in.</string>
+    <string name="employees_created_title">Employee created</string>
+    <string name="employees_created_body">Temporary password for %1$s:</string>
+    <string name="employee_last_login">Last sign-in</string>
+    <string name="employee_today">Today</string>
+    <string name="employee_stats_30d">Last 30 days</string>
+    <string name="employee_present_days">Days present</string>
+    <string name="employee_late_days">Late days</string>
+    <string name="employee_absent_days">Absent days</string>
+    <string name="employee_worked">Hours worked</string>
+    <string name="employee_manual_requests">Manual requests</string>
+    <string name="employee_actions">Actions</string>
+    <string name="employee_edit">Edit details</string>
+    <string name="employee_reset_password">Reset password</string>
+    <string name="employee_deactivate">Deactivate</string>
+    <string name="employee_deactivate_body">The account is disabled and all devices and sessions are revoked. A reason is required.</string>
+    <string name="employee_reactivate">Reactivate</string>
+    <string name="employee_export">Export personal data</string>
+    <string name="employee_erase">Erase personal data</string>
+    <string name="employee_erase_body">This pseudonymises %1$s\'s personal data after retention checks and cannot be undone. Type the employee number to confirm.</string>
+    <string name="employee_devices">Devices</string>
+    <string name="employee_no_devices">No devices registered.</string>
+    <string name="employee_device_seen">Last seen %1$s</string>
+    <string name="employee_temp_password_title">Temporary password</string>
+    <string name="employee_temp_password_body">The employee must change this at the next sign-in.</string>
+
+    <!-- Devices -->
+    <string name="devices_approve">Approve</string>
+    <string name="devices_revoke">Revoke</string>
+
+    <!-- Review queue -->
+    <string name="review_tab_events">Detections</string>
+    <string name="review_tab_requests">Manual requests</string>
+    <string name="review_wifi">Wi-Fi match</string>
+    <string name="review_wifi_matched">Matched</string>
+    <string name="review_wifi_not_matched">Not matched</string>
+    <string name="requests_type">Type</string>
+    <string name="requests_work_date">Work date</string>
+    <string name="requests_clock_in">Clock in</string>
+    <string name="requests_clock_out">Clock out</string>
+    <string name="review_requests_empty_title">No manual requests</string>
+    <string name="review_requests_empty_body">Nothing is waiting for a decision.</string>
+    <string name="review_approve_request">Approve request</string>
+    <string name="review_reject_request">Reject request</string>
+    <string name="review_request_summary">%1$s for %2$s on %3$s.</string>
+    <string name="review_profile_change">%1$s will be set to "%2$s".</string>
+    <string name="records_times_sast">Times are in South African Standard Time.</string>
 </resources>
