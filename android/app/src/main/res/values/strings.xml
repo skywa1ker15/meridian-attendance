@@ -646,7 +646,7 @@
     <string name="link_server_body">This link is for %1$s, but this phone is set up for %2$s. Switching signs you out of the current server.</string>
     <string name="link_server_switch">Switch server</string>
     <string name="link_server_keep">Keep current server</string>
-    <string name="employees_invite_note">The employee is emailed an invitation link and chooses their own password; no temporary password is handed out.</string>
+    <string name="employees_invite_note">When email is set up on the server, the employee is emailed an invitation link and chooses their own password; otherwise a one-time temporary password is created here.</string>
     <string name="employees_phone_optional">Optional — the employee enters their number when they accept the invitation.</string>
     <string name="employees_invited_title">Invitation sent</string>
     <string name="employees_invited_body">%1$s was created. Invitation emailed to %2$s, expires %3$s.</string>
