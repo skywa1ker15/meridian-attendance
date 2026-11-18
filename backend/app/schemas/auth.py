@@ -49,7 +49,9 @@ class ResetPasswordIn(ApiModel):
 
 
 class InvitationAcceptIn(ApiModel):
-    token: str = Field(..., min_length=16, max_length=512)
+    # Length is not validated here: a malformed token must come back as
+    # 400 token_invalid like any other bad one, not as a 422.
+    token: str = Field(..., min_length=1, max_length=512)
     phone: str = Field(..., min_length=6, max_length=32)
     password: str = Field(..., min_length=1, max_length=256)
     device: DeviceIn | None = None

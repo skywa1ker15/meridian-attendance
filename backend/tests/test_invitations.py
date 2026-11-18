@@ -97,10 +97,21 @@ def test_invitation_details(client, admin_tokens, db, mail):
     assert body["expires_at"]
 
 
-def test_invitation_details_reveal_nothing_for_a_bad_token(client):
-    r = client.get("/api/v1/auth/invitation", params={"token": "x" * 40})
+@pytest.mark.parametrize("token", ["x" * 40, "short", ""])
+def test_invitation_details_reveal_nothing_for_a_bad_token(client, token):
+    r = client.get("/api/v1/auth/invitation", params={"token": token})
     assert r.status_code == 400 and r.json()["error"]["code"] == "token_invalid"
     assert "@" not in r.json()["error"]["message"]
+
+
+def test_invitation_details_without_a_token_parameter(client):
+    r = client.get("/api/v1/auth/invitation")
+    assert r.status_code == 400 and r.json()["error"]["code"] == "token_invalid"
+
+
+def test_accept_with_a_malformed_token(client):
+    r = accept(client, "nope")
+    assert r.status_code == 400 and r.json()["error"]["code"] == "token_invalid"
 
 
 # --- acceptance --------------------------------------------------------------

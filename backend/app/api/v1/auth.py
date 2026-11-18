@@ -30,7 +30,7 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/invitation")
-def invitation_details(token: str = Query(..., min_length=16, max_length=512), db: Session = Depends(get_db)):
+def invitation_details(token: str = Query("", max_length=512), db: Session = Depends(get_db)):
     """What the invited employee sees before activating. Reveals nothing for a bad token."""
     return invitations.details(db, token)
 
