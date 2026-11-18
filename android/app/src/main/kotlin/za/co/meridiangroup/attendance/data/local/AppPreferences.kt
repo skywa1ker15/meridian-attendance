@@ -38,6 +38,8 @@ class AppPreferences(context: Context) {
         val geofencesRegisteredVersion = intPreferencesKey("geofences_registered_version")
         val pushEnabled = booleanPreferencesKey("push_enabled")
         val deviceStatus = stringPreferencesKey("device_status")
+        /** Backend root chosen in Settings → Server (survives logout; null = BuildConfig default). */
+        val serverRoot = stringPreferencesKey("server_root")
     }
 
     /** Generated once per installation and reused for every login (API.md `device.device_id`). */
@@ -56,6 +58,10 @@ class AppPreferences(context: Context) {
     val policyFlow: Flow<PolicyDto?> = ds.data.map { prefs -> prefs[Keys.policyJson]?.let { decodePolicy(it) } }
     val pushEnabledFlow: Flow<Boolean> = ds.data.map { it[Keys.pushEnabled] ?: true }
     val deviceStatusFlow: Flow<String?> = ds.data.map { it[Keys.deviceStatus] }
+
+    val serverRootFlow: Flow<String?> = ds.data.map { it[Keys.serverRoot] }
+    suspend fun serverRoot(): String? = ds.data.first()[Keys.serverRoot]
+    suspend fun setServerRoot(root: String?) = ds.edit { if (root == null) it.remove(Keys.serverRoot) else it[Keys.serverRoot] = root }
 
     suspend fun user(): UserDto? = ds.data.first()[Keys.userJson]?.let { decodeUser(it) }
     suspend fun policy(): PolicyDto? = ds.data.first()[Keys.policyJson]?.let { decodePolicy(it) }

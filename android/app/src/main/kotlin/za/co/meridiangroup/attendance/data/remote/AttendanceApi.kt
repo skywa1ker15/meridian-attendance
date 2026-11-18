@@ -8,41 +8,10 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
-import za.co.meridiangroup.attendance.data.remote.dto.AuthResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.ChangePasswordRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.ConfirmEventRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.ConfirmEventResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.CountDto
-import za.co.meridiangroup.attendance.data.remote.dto.DeviceDto
-import za.co.meridiangroup.attendance.data.remote.dto.DeviceInfoDto
-import za.co.meridiangroup.attendance.data.remote.dto.DismissEventRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.EventDto
-import za.co.meridiangroup.attendance.data.remote.dto.FcmTokenRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.ForgotPasswordRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.IntegrityRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.IntegrityResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.ItemsDto
-import za.co.meridiangroup.attendance.data.remote.dto.LiveAttendanceResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.LoginRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.LogoutRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.ManualRequestCreateDto
-import za.co.meridiangroup.attendance.data.remote.dto.ManualRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.MeResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.NotificationDto
-import za.co.meridiangroup.attendance.data.remote.dto.PageDto
-import za.co.meridiangroup.attendance.data.remote.dto.PatchMeRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.PolicyDto
-import za.co.meridiangroup.attendance.data.remote.dto.RefreshRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.ReviewNoteRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.SessionDetailDto
-import za.co.meridiangroup.attendance.data.remote.dto.SessionDto
-import za.co.meridiangroup.attendance.data.remote.dto.SubmitEventRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.SubmitEventResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.SyncRequestDto
-import za.co.meridiangroup.attendance.data.remote.dto.SyncResponseDto
-import za.co.meridiangroup.attendance.data.remote.dto.TodaySummaryDto
-import za.co.meridiangroup.attendance.data.remote.dto.UserDto
-import za.co.meridiangroup.attendance.data.remote.dto.WorkplacesResponseDto
+import retrofit2.http.Streaming
+import okhttp3.ResponseBody
+import kotlinx.serialization.json.JsonObject
+import za.co.meridiangroup.attendance.data.remote.dto.*
 
 /**
  * Retrofit mirror of docs/API.md (base path `/api/v1/` is part of the Retrofit base URL).
@@ -186,4 +155,194 @@ interface AttendanceApi {
 
     @POST("admin/attendance/events/{id}/reject")
     suspend fun adminRejectEvent(@Path("id") id: String, @Body body: ReviewNoteRequestDto): Response<EventDto>
+
+    @POST("admin/attendance/events/{id}/approve")
+    suspend fun adminApproveEventOptionalNote(@Path("id") id: String, @Body body: OptionalNoteRequestDto): Response<EventDto>
+
+    // ---- §0 First-run setup (no authentication) ----
+    @GET("setup/status")
+    suspend fun setupStatus(): Response<SetupStatusDto>
+
+    @POST("setup/first-admin")
+    suspend fun setupFirstAdmin(@Body body: FirstAdminRequestDto): Response<AuthResponseDto>
+
+    // ---- §7 Administration: overview ----
+    @GET("admin/overview")
+    suspend fun adminOverview(@Query("date") date: String? = null): Response<OverviewDto>
+
+    @GET("admin/attendance/exceptions")
+    suspend fun adminExceptions(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("department_id") departmentId: String? = null,
+        @Query("kind") kind: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): Response<PageDto<AttendanceExceptionDto>>
+
+    // ---- Employees ----
+    @GET("admin/employees")
+    suspend fun adminEmployees(
+        @Query("search") search: String? = null,
+        @Query("department_id") departmentId: String? = null,
+        @Query("status") status: String? = null,
+        @Query("role") role: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): Response<PageDto<UserDto>>
+
+    @POST("admin/employees")
+    suspend fun adminCreateEmployee(@Body body: EmployeeCreateRequestDto): Response<EmployeeCreatedDto>
+
+    @GET("admin/employees/{id}")
+    suspend fun adminEmployee(@Path("id") id: String): Response<EmployeeDetailDto>
+
+    @PATCH("admin/employees/{id}")
+    suspend fun adminUpdateEmployee(@Path("id") id: String, @Body body: EmployeeUpdateRequestDto): Response<UserDto>
+
+    @POST("admin/employees/{id}/deactivate")
+    suspend fun adminDeactivateEmployee(@Path("id") id: String, @Body body: ReasonRequestDto): Response<UserDto>
+
+    @POST("admin/employees/{id}/reactivate")
+    suspend fun adminReactivateEmployee(@Path("id") id: String): Response<UserDto>
+
+    @POST("admin/employees/{id}/reset-password")
+    suspend fun adminResetPassword(@Path("id") id: String): Response<TemporaryPasswordDto>
+
+    @POST("admin/employees/{id}/role")
+    suspend fun adminChangeRole(@Path("id") id: String, @Body body: RoleRequestDto): Response<UserDto>
+
+    @Streaming
+    @GET("admin/employees/{id}/export")
+    suspend fun adminExportEmployee(@Path("id") id: String): Response<ResponseBody>
+
+    @POST("admin/employees/{id}/erase")
+    suspend fun adminEraseEmployee(@Path("id") id: String, @Body body: EraseRequestDto): Response<EraseResponseDto>
+
+    // ---- Departments ----
+    @GET("admin/departments")
+    suspend fun adminDepartments(): Response<ItemsDto<AdminDepartmentDto>>
+
+    @POST("admin/departments")
+    suspend fun adminCreateDepartment(@Body body: DepartmentCreateRequestDto): Response<AdminDepartmentDto>
+
+    @PATCH("admin/departments/{id}")
+    suspend fun adminUpdateDepartment(@Path("id") id: String, @Body body: DepartmentUpdateRequestDto): Response<AdminDepartmentDto>
+
+    // ---- Devices ----
+    @GET("admin/devices")
+    suspend fun adminDevices(
+        @Query("status") status: String? = null,
+        @Query("user_id") userId: String? = null,
+        @Query("search") search: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): Response<PageDto<DeviceDto>>
+
+    @POST("admin/devices/{id}/approve")
+    suspend fun adminApproveDevice(@Path("id") id: String): Response<DeviceDto>
+
+    @POST("admin/devices/{id}/revoke")
+    suspend fun adminRevokeDevice(@Path("id") id: String, @Body body: ReasonRequestDto): Response<DeviceDto>
+
+    // ---- Attendance records ----
+    @GET("admin/attendance/sessions")
+    suspend fun adminSessions(
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("employee_id") employeeId: String? = null,
+        @Query("department_id") departmentId: String? = null,
+        @Query("status") status: String? = null,
+        @Query("late") late: Boolean? = null,
+        @Query("manual") manual: Boolean? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): Response<PageDto<SessionDto>>
+
+    @GET("admin/attendance/sessions/{id}")
+    suspend fun adminSession(@Path("id") id: String): Response<SessionDetailDto>
+
+    @PATCH("admin/attendance/sessions/{id}")
+    suspend fun adminCorrectSession(@Path("id") id: String, @Body body: SessionCorrectionRequestDto): Response<SessionDto>
+
+    @POST("admin/attendance/sessions")
+    suspend fun adminCreateSession(@Body body: SessionCreateRequestDto): Response<SessionDto>
+
+    // ---- Manual requests ----
+    @GET("admin/manual-requests")
+    suspend fun adminManualRequests(
+        @Query("status") status: String? = null,
+        @Query("type") type: String? = null,
+        @Query("employee_id") employeeId: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 30,
+    ): Response<PageDto<ManualRequestDto>>
+
+    @POST("admin/manual-requests/{id}/approve")
+    suspend fun adminApproveRequest(@Path("id") id: String, @Body body: RequestApproveRequestDto): Response<ManualRequestDto>
+
+    @POST("admin/manual-requests/{id}/reject")
+    suspend fun adminRejectRequest(@Path("id") id: String, @Body body: ReviewNoteRequestDto): Response<ManualRequestDto>
+
+    // ---- Reports ----
+    @GET("admin/reports/{report}")
+    suspend fun adminReport(
+        @Path("report") report: String,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("employee_id") employeeId: String? = null,
+        @Query("department_id") departmentId: String? = null,
+        @Query("status") status: String? = null,
+        @Query("format") format: String = "json",
+    ): Response<ReportDto>
+
+    @Streaming
+    @GET("admin/reports/{report}")
+    suspend fun adminReportFile(
+        @Path("report") report: String,
+        @Query("format") format: String,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("employee_id") employeeId: String? = null,
+        @Query("department_id") departmentId: String? = null,
+        @Query("status") status: String? = null,
+    ): Response<ResponseBody>
+
+    // ---- Workplaces & policy ----
+    @GET("admin/workplaces")
+    suspend fun adminWorkplaces(): Response<ItemsDto<WorkplaceDto>>
+
+    @POST("admin/workplaces")
+    suspend fun adminCreateWorkplace(@Body body: JsonObject): Response<WorkplaceDto>
+
+    @PATCH("admin/workplaces/{id}")
+    suspend fun adminUpdateWorkplace(@Path("id") id: String, @Body body: JsonObject): Response<WorkplaceDto>
+
+    @GET("admin/policy")
+    suspend fun adminPolicy(): Response<PolicyDto>
+
+    @PATCH("admin/policy")
+    suspend fun adminUpdatePolicy(@Body body: JsonObject): Response<PolicyDto>
+
+    // ---- Roles, audit, broadcast ----
+    @GET("admin/roles")
+    suspend fun adminRoles(): Response<RolesResponseDto>
+
+    @GET("admin/audit-logs")
+    suspend fun adminAuditLogs(
+        @Query("actor_id") actorId: String? = null,
+        @Query("action") action: String? = null,
+        @Query("entity_type") entityType: String? = null,
+        @Query("entity_id") entityId: String? = null,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
+        @Query("search") search: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): Response<PageDto<AuditLogDto>>
+
+    @POST("admin/notifications/broadcast")
+    suspend fun adminBroadcast(@Body body: BroadcastRequestDto): Response<BroadcastResponseDto>
 }

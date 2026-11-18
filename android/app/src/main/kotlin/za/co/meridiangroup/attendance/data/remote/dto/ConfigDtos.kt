@@ -2,6 +2,7 @@ package za.co.meridiangroup.attendance.data.remote.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class WorkplaceDto(
@@ -28,6 +29,8 @@ data class WorkplaceDto(
      * app falls back to "confirmed only if the coordinates are valid and non-zero" (see [isConfigured]).
      */
     @SerialName("coordinates_confirmed") val coordinatesConfirmed: Boolean? = null,
+    @SerialName("config_version") val configVersion: Int? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
 ) {
     val isConfigured: Boolean
         get() = coordinatesConfirmed ?: (latitude != 0.0 && longitude != 0.0 &&
@@ -65,7 +68,8 @@ data class PolicyDto(
     @SerialName("retention_days_attendance") val retentionDaysAttendance: Int = 1825,
     @SerialName("retention_days_location") val retentionDaysLocation: Int = 365,
     @SerialName("retention_days_audit") val retentionDaysAudit: Int = 2555,
-    @SerialName("notification_quiet_hours") val notificationQuietHours: String? = null,
+    /** Object (e.g. `{"start": "20:00", "end": "07:00"}`) or null — kept as raw JSON. */
+    @SerialName("notification_quiet_hours") val notificationQuietHours: JsonElement? = null,
     /**
      * Minutes after which a still-pending confirmation is re-notified locally. Not (yet) part of the
      * docs/API.md §8 policy object: when the backend omits it the app uses 15 minutes.

@@ -70,6 +70,17 @@ object JohannesburgTime {
         LocalDateTime.of(LocalDate.parse(workDate), LocalTime.parse(localTime)).atZone(zone).toInstant()
     }.getOrNull()
 
+    /** Local (SAST) `YYYY-MM-DD` and `HH:mm` of a UTC timestamp, for pre-filling date/time inputs. */
+    fun localParts(iso: String?): Pair<String, String>? = parse(iso)?.atZone(zone)?.let { z ->
+        z.toLocalDate().toString() to z.toLocalTime().format(timeFmt)
+    }
+
+    /** Local date + `HH:mm` (SAST) → ISO-8601 UTC wire string, or null when either part is invalid. */
+    fun localToIsoUtc(workDate: String?, localTime: String?): String? {
+        if (workDate.isNullOrBlank() || localTime.isNullOrBlank()) return null
+        return localToInstant(workDate.trim(), localTime.trim())?.let { toIsoUtc(it) }
+    }
+
     /** `just now`, `3 min ago`, `2 h ago`, `yesterday`, or a date for anything older. */
     fun relative(instant: Instant?, nowMillis: Long): String {
         if (instant == null) return "—"

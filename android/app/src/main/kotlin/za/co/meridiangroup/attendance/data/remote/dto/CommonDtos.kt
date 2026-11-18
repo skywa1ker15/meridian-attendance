@@ -60,6 +60,8 @@ data class EmployeeSummaryDto(
     @SerialName("first_name") val firstName: String = "",
     @SerialName("last_name") val lastName: String = "",
     @SerialName("department") val department: DepartmentDto? = null,
+    @SerialName("role") val role: String? = null,
+    @SerialName("status") val status: String? = null,
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
 }

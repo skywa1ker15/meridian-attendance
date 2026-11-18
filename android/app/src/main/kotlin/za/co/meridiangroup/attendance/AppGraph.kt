@@ -7,6 +7,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -18,6 +20,10 @@ import za.co.meridiangroup.attendance.data.local.db.AppDatabase
 import za.co.meridiangroup.attendance.data.remote.ApiCaller
 import za.co.meridiangroup.attendance.data.remote.ApiClientFactory
 import za.co.meridiangroup.attendance.data.remote.AttendanceApi
+import za.co.meridiangroup.attendance.data.remote.BaseUrlHolder
+import za.co.meridiangroup.attendance.core.ServerUrls
+import za.co.meridiangroup.attendance.data.files.ExportStore
+import za.co.meridiangroup.attendance.data.repository.ServerConfigRepository
 import za.co.meridiangroup.attendance.data.remote.ForcedLogoutListener
 import za.co.meridiangroup.attendance.data.repository.AdminRepository
 import za.co.meridiangroup.attendance.data.repository.AttendanceRepository
@@ -71,12 +77,23 @@ class AppGraph(
         }
     }
 
+    /** Current backend (Settings → Server); every Retrofit request is rewritten onto it. */
+    private val defaultServerRoot: String = baseUrlOverride?.let { ServerUrls.rootOf(it) } ?: ApiClientFactory.defaultRoot()
+    val baseUrlHolder = BaseUrlHolder(
+        if (baseUrlOverride != null) defaultServerRoot else runBlocking { prefs.serverRoot() } ?: defaultServerRoot,
+    )
+
     val api: AttendanceApi = apiOverride ?: run {
-        val refreshApi = ApiClientFactory.createRefreshApi(baseUrlOverride)
-        ApiClientFactory.createApi(tokenStore, refreshApi, forcedLogout, baseUrlOverride)
+        val refreshApi = ApiClientFactory.createRefreshApi(baseUrlHolder)
+        ApiClientFactory.createApi(tokenStore, refreshApi, forcedLogout, baseUrlHolder)
     }
     val apiCaller = ApiCaller(forcedLogout)
-    val apiBaseUrl: String = ApiClientFactory.baseUrl(baseUrlOverride)
+    val apiBaseUrl: String get() = baseUrlHolder.apiBaseUrl
+    val serverConfigRepository = ServerConfigRepository(prefs, baseUrlHolder, defaultServerRoot) { ApiClientFactory.probeClient() }
+    val exportStore = ExportStore(appContext)
+
+    /** Set after POST /setup/first-admin so the Manage home can offer workplace setup once. */
+    val offerWorkplaceSetup = MutableStateFlow(false)
 
     val permissionChecker = PermissionChecker(appContext)
     val signalCollector = SignalCollector(appContext, permissionChecker)
@@ -108,6 +125,11 @@ class AppGraph(
             fcmTokenManager.ensureUploaded()
             reminderScheduler.rescheduleFromPending()
         }
+    }
+
+    /** After a workplace is created/edited from the app: pull the new config and re-register geofences now. */
+    fun onWorkplacesChanged() {
+        appScope.launch { configRepository.refresh(forceGeofences = true) }
     }
 
     private suspend fun wipeLocalData() {

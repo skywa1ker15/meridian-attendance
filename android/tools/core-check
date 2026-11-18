@@ -36,7 +36,7 @@ fi
 SER_PLUGIN="$KOTLINC_HOME/lib/kotlinx-serialization-compiler-plugin.jar"
 
 MAIN_SRC=("$MAIN"/core/*.kt "$MAIN"/data/remote/dto/*.kt "$MAIN/data/remote/ApiJson.kt")
-TEST_SRC=("$TEST"/core/*.kt "$TEST"/data/remote/DtoContractTest.kt)
+TEST_SRC=("$TEST"/core/*.kt "$TEST"/data/remote/DtoContractTest.kt "$TEST"/data/remote/AdminDtoContractTest.kt)
 
 # Guard: these files must stay free of Android / Retrofit / OkHttp / Room imports.
 FORBIDDEN='^import (android|androidx|com\.google|retrofit2|okhttp3|com\.jakewharton|kotlinx\.coroutines)'

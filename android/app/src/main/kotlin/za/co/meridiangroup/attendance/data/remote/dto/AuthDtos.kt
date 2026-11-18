@@ -54,6 +54,8 @@ data class UserDto(
     @SerialName("permissions") val permissions: List<String> = emptyList(),
     @SerialName("notification_preferences") val notificationPreferences: NotificationPreferencesDto? = null,
     @SerialName("last_attendance_status") val lastAttendanceStatus: String? = null,
+    /** Present only in GET /admin/employees items. */
+    @SerialName("active_device") val activeDevice: DeviceDto? = null,
 ) {
     val fullName: String get() = listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
 }
@@ -73,6 +75,8 @@ data class DeviceDto(
     @SerialName("registered_at") val registeredAt: String? = null,
     @SerialName("last_seen_at") val lastSeenAt: String? = null,
     @SerialName("integrity_verdict") val integrityVerdict: String? = null,
+    /** Present only on admin device endpoints (GET /admin/devices, approve, revoke). */
+    @SerialName("employee") val employee: EmployeeSummaryDto? = null,
 )
 
 @Serializable
@@ -110,3 +114,30 @@ data class IntegrityRequestDto(@SerialName("integrity_token") val integrityToken
 
 @Serializable
 data class IntegrityResponseDto(@SerialName("verdict") val verdict: String = "unknown")
+
+// ---- §0 First-run setup ----
+
+@Serializable
+data class SetupStatusDto(
+    @SerialName("needs_first_admin") val needsFirstAdmin: Boolean = false,
+    @SerialName("setup_code_required") val setupCodeRequired: Boolean = false,
+)
+
+@Serializable
+data class FirstAdminRequestDto(
+    @SerialName("setup_code") val setupCode: String? = null,
+    @SerialName("employee_number") val employeeNumber: String,
+    @SerialName("first_name") val firstName: String,
+    @SerialName("last_name") val lastName: String,
+    @SerialName("email") val email: String,
+    @SerialName("password") val password: String,
+    @SerialName("device") val device: DeviceInfoDto? = null,
+)
+
+// ---- §9 Health (served at the server root, not under /api/v1) ----
+
+@Serializable
+data class HealthDto(
+    @SerialName("status") val status: String = "",
+    @SerialName("version") val version: String? = null,
+)
