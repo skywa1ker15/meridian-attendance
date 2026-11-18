@@ -244,6 +244,49 @@ fun SecretDialog(title: String, body: String, secret: String, onDismiss: () -> U
     )
 }
 
+/**
+ * What happened to an invitation: emailed (nothing to hand over), or not sent because email is not
+ * configured — then the administrator must pass the link on themselves, and it activates the account,
+ * so it may only go to that one employee.
+ */
+@Composable
+fun InvitationDialog(name: String, email: String, expiresAt: String?, link: String?, onDismiss: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val expires = expiresAt?.let(JohannesburgTime::dateTime)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (link == null) R.string.employees_invited_title else R.string.employees_invite_not_sent_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Text(
+                    when {
+                        link != null && expires != null -> stringResource(R.string.employees_invite_not_sent_body, name, expires)
+                        link != null -> stringResource(R.string.employees_invite_not_sent_body_no_expiry, name)
+                        expires != null -> stringResource(R.string.employees_invited_body, name, email, expires)
+                        else -> stringResource(R.string.employees_invited_body_no_expiry, name, email)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.testTag("employee_invited_body"),
+                )
+                if (link != null) {
+                    Text(link, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("invitation_link"))
+                    Row {
+                        IconButton(onClick = { clipboard.setText(AnnotatedString(link)) }, modifier = Modifier.testTag("invitation_copy")) {
+                            Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.action_copy))
+                        }
+                        IconButton(onClick = { context.shareText(link) }, modifier = Modifier.testTag("invitation_share")) {
+                            Icon(Icons.Outlined.Share, contentDescription = stringResource(R.string.action_share))
+                        }
+                    }
+                    Text(stringResource(R.string.employees_invite_link_warning, email), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_done)) } },
+    )
+}
+
 fun Context.shareText(text: String) {
     val send = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"

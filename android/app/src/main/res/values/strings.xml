@@ -652,4 +652,8 @@
     <string name="employees_invited_body">%1$s was created. Invitation emailed to %2$s, expires %3$s.</string>
     <string name="employees_invited_body_no_expiry">%1$s was created. Invitation emailed to %2$s.</string>
     <string name="employee_resend_invitation">Resend invitation</string>
+    <string name="employees_invite_not_sent_title">Invitation could not be emailed</string>
+    <string name="employees_invite_not_sent_body">%1$s was invited, but the email could not be sent. Give them this link yourself \u2014 it expires %2$s:</string>
+    <string name="employees_invite_not_sent_body_no_expiry">%1$s was invited, but the email could not be sent. Give them this link yourself:</string>
+    <string name="employees_invite_link_warning">This link activates the account: send it only to %1$s, over a channel you trust.</string>
 </resources>

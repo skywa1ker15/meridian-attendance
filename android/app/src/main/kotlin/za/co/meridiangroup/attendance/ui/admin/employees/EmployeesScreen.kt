@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.ApiResult
-import za.co.meridiangroup.attendance.core.JohannesburgTime
 import za.co.meridiangroup.attendance.core.PhoneNumbers
 import za.co.meridiangroup.attendance.core.ServerPermissions
 import za.co.meridiangroup.attendance.core.StatusTones
@@ -51,6 +50,7 @@ import za.co.meridiangroup.attendance.ui.admin.AdminTitle
 import za.co.meridiangroup.attendance.ui.admin.ChipFilters
 import za.co.meridiangroup.attendance.ui.admin.PagedUiState
 import za.co.meridiangroup.attendance.ui.admin.SearchField
+import za.co.meridiangroup.attendance.ui.admin.InvitationDialog
 import za.co.meridiangroup.attendance.ui.admin.SecretDialog
 import za.co.meridiangroup.attendance.ui.admin.PagedFooter
 import za.co.meridiangroup.attendance.ui.components.GlassCard
@@ -76,7 +76,7 @@ data class EmployeesUiState(
  * password from the emailed link), but an administrator can still hand out a temporary password instead.
  */
 sealed class CreateOutcome {
-    data class Invited(val name: String, val email: String, val expiresAt: String?) : CreateOutcome()
+    data class Invited(val name: String, val email: String, val expiresAt: String?, val link: String?) : CreateOutcome()
     data class TemporaryPassword(val name: String, val password: String) : CreateOutcome()
 }
 
@@ -122,6 +122,8 @@ class EmployeesViewModel(private val repo: AdminRepository) : ViewModel() {
                             value.user.fullName,
                             value.invitation?.email?.ifBlank { null } ?: value.user.email,
                             value.invitation?.expiresAt,
+                            // Present only when the email could not be sent.
+                            value.invitation?.takeIf { i -> i.sent != true }?.link?.ifBlank { null },
                         )
                     _state.update { it.copy(creating = false, created = outcome) }
                     onCreated()
@@ -215,18 +217,9 @@ fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, on
             outcome.password,
             viewModel::clearSecret,
         )
-        is CreateOutcome.Invited -> AlertDialog(
-            onDismissRequest = viewModel::clearSecret,
-            title = { Text(stringResource(R.string.employees_invited_title)) },
-            text = {
-                val expires = outcome.expiresAt?.let(JohannesburgTime::dateTime)
-                Text(
-                    if (expires == null) stringResource(R.string.employees_invited_body_no_expiry, outcome.name, outcome.email)
-                    else stringResource(R.string.employees_invited_body, outcome.name, outcome.email, expires),
-                    modifier = Modifier.testTag("employee_invited_body"),
-                )
-            },
-            confirmButton = { TextButton(onClick = viewModel::clearSecret) { Text(stringResource(R.string.action_done)) } },
+        is CreateOutcome.Invited -> InvitationDialog(
+            name = outcome.name, email = outcome.email, expiresAt = outcome.expiresAt, link = outcome.link,
+            onDismiss = viewModel::clearSecret,
         )
         null -> Unit
     }

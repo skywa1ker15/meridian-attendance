@@ -26,12 +26,19 @@ private var token: String? = null
 private var passed = 0
 private val failures = mutableListOf<String>()
 
+/** The auth endpoints are rate limited per IP; a throttled call waits out Retry-After and tries again. */
 private fun call(method: String, path: String, body: String?): Pair<Int, String> {
-    val b = HttpRequest.newBuilder(URI.create(base + path)).header("Content-Type", "application/json")
-    token?.let { b.header("Authorization", "Bearer $it") }
-    b.method(method, if (body == null) HttpRequest.BodyPublishers.noBody() else HttpRequest.BodyPublishers.ofString(body))
-    val r = http.send(b.build(), HttpResponse.BodyHandlers.ofString())
-    return r.statusCode() to r.body()
+    repeat(3) { attempt ->
+        val b = HttpRequest.newBuilder(URI.create(base + path)).header("Content-Type", "application/json")
+        token?.let { b.header("Authorization", "Bearer $it") }
+        b.method(method, if (body == null) HttpRequest.BodyPublishers.noBody() else HttpRequest.BodyPublishers.ofString(body))
+        val r = http.send(b.build(), HttpResponse.BodyHandlers.ofString())
+        if (r.statusCode() != 429 || attempt == 2) return r.statusCode() to r.body()
+        val wait = r.headers().firstValue("Retry-After").map { it.toLongOrNull() ?: 5L }.orElse(5L).coerceIn(1L, 60L)
+        println("       (rate limited on $path, waiting ${wait}s)")
+        Thread.sleep((wait + 1) * 1000)
+    }
+    error("unreachable")
 }
 
 private fun <T> step(name: String, method: String, path: String, body: String?, ser: KSerializer<T>, expect: Set<Int> = setOf(200, 201)): T? {
@@ -211,6 +218,12 @@ private fun invitationFlow(suffix: String) {
     if (created.invitation == null) failures += "create with send_invitation=true returned no invitation object"
     if (!created.temporaryPassword.isNullOrBlank()) failures += "an invited employee must not get a temporary password"
     if (created.invitation?.expiresAt.isNullOrBlank()) failures += "invitation has no expires_at"
+    // When the email could not be sent the admin must be handed the link, otherwise the employee is stranded.
+    created.invitation?.let { inv ->
+        if (inv.sent != true && inv.link.isNullOrBlank()) failures += "invitation was not emailed and carries no link"
+        if (inv.sent == true && !inv.link.isNullOrBlank()) failures += "an emailed invitation must not expose its link"
+        println("       -> invitation sent=${inv.sent} link=${if (inv.link.isNullOrBlank()) "none" else "present"}")
+    }
 
     // The app's login screen maps this code onto "finish setting up your account".
     token = null
@@ -270,7 +283,8 @@ private fun invitationFlow(suffix: String) {
         EmployeeCreatedDto.serializer(), expect = setOf(201),
     )
     second?.user?.id?.let { id ->
-        step("resend invitation", "POST", "/admin/employees/$id/invite", null, InvitationSummaryDto.serializer())
+        val resent = step("resend invitation", "POST", "/admin/employees/$id/invite", null, InvitationSummaryDto.serializer())
+        if (resent != null && resent.sent != true && resent.link.isNullOrBlank()) failures += "resent invitation was not emailed and carries no link"
     }
 }
 

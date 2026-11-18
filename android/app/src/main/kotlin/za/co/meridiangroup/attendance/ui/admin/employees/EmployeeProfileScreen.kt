@@ -48,9 +48,11 @@ import za.co.meridiangroup.attendance.data.remote.dto.AdminDepartmentDto
 import za.co.meridiangroup.attendance.data.remote.dto.DeviceDto
 import za.co.meridiangroup.attendance.data.remote.dto.EmployeeDetailDto
 import za.co.meridiangroup.attendance.data.remote.dto.EmployeeUpdateRequestDto
+import za.co.meridiangroup.attendance.data.remote.dto.InvitationSummaryDto
 import za.co.meridiangroup.attendance.ui.admin.AdminDropdown
 import za.co.meridiangroup.attendance.ui.admin.AdminMessage
 import za.co.meridiangroup.attendance.ui.admin.AdminTitle
+import za.co.meridiangroup.attendance.ui.admin.InvitationDialog
 import za.co.meridiangroup.attendance.ui.admin.NoteDialog
 import za.co.meridiangroup.attendance.ui.admin.SecretDialog
 import za.co.meridiangroup.attendance.ui.components.ErrorState
@@ -72,6 +74,8 @@ data class EmployeeProfileUiState(
     val message: String? = null,
     val busy: Boolean = false,
     val secret: String? = null,
+    /** Result of "Resend invitation": shown with the link when the email could not be sent. */
+    val invitation: InvitationSummaryDto? = null,
     val exportFile: File? = null,
     val erased: Boolean = false,
 )
@@ -118,10 +122,7 @@ class EmployeeProfileViewModel(private val graph: AppGraph, private val employee
         _state.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
             when (val r = repo.resendInvitation(employeeId)) {
-                is ApiResult.Success -> _state.update {
-                    val email = r.value.email?.ifBlank { null } ?: it.detail?.user?.email.orEmpty()
-                    it.copy(busy = false, message = "Invitation emailed to $email.")
-                }
+                is ApiResult.Success -> _state.update { it.copy(busy = false, invitation = r.value) }
                 else -> _state.update { it.copy(busy = false, message = r.userMessage()) }
             }
         }
@@ -160,6 +161,7 @@ class EmployeeProfileViewModel(private val graph: AppGraph, private val employee
 
     fun clearMessage() = _state.update { it.copy(message = null) }
     fun clearSecret() = _state.update { it.copy(secret = null) }
+    fun clearInvitation() = _state.update { it.copy(invitation = null) }
     fun clearExport() = _state.update { it.copy(exportFile = null) }
     val exports: ExportStore get() = graph.exportStore
 }
@@ -313,6 +315,16 @@ fun EmployeeProfileScreen(viewModel: EmployeeProfileViewModel, permissions: List
             employeeNumber = detailUser.employeeNumber,
             onDismiss = { erasing = false },
             onErase = { number, reason -> erasing = false; viewModel.erase(number, reason) },
+        )
+    }
+    state.invitation?.let { invitation ->
+        val employee = state.detail?.user
+        InvitationDialog(
+            name = employee?.fullName.orEmpty(),
+            email = invitation.email?.ifBlank { null } ?: employee?.email.orEmpty(),
+            expiresAt = invitation.expiresAt,
+            link = invitation.takeIf { it.sent != true }?.link?.ifBlank { null },
+            onDismiss = viewModel::clearInvitation,
         )
     }
     state.secret?.let {

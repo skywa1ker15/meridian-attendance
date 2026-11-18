@@ -140,6 +140,8 @@ data class InvitationSummaryDto(
     @SerialName("email") val email: String? = null,
     @SerialName("expires_at") val expiresAt: String? = null,
     @SerialName("sent") val sent: Boolean? = null,
+    /** Set only when the email could NOT be sent: the administrator must hand the link over themselves. */
+    @SerialName("link") val link: String? = null,
 )
 
 @Serializable
