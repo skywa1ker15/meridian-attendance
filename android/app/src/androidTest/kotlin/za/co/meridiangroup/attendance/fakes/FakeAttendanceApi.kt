@@ -38,6 +38,9 @@ import za.co.meridiangroup.attendance.data.remote.dto.SyncRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.SyncResponseDto
 import za.co.meridiangroup.attendance.data.remote.dto.TodaySummaryDto
 import za.co.meridiangroup.attendance.data.remote.dto.UserDto
+import za.co.meridiangroup.attendance.data.remote.dto.*
+import kotlinx.serialization.json.JsonObject
+import okhttp3.ResponseBody.Companion.toResponseBody
 import za.co.meridiangroup.attendance.data.remote.dto.WorkplacesResponseDto
 
 /** In-memory fake of the REST contract used by instrumented UI tests. Behaviour is switched per test. */
@@ -106,4 +109,62 @@ class FakeAttendanceApi : AttendanceApi {
         guard("adminEvents") { Response.success(PageDto<EventDto>()) }
     override suspend fun adminApproveEvent(id: String, body: ReviewNoteRequestDto) = guard("adminApproveEvent") { Response.success(event(id, "confirmed")) }
     override suspend fun adminRejectEvent(id: String, body: ReviewNoteRequestDto) = guard("adminRejectEvent") { Response.success(event(id, "rejected")) }
+
+    // ---- Admin / setup surface: not exercised by the instrumented UI tests, but the interface must be complete. ----
+    private fun <T> notUsed(name: String): Response<T> = err(403, "forbidden", "$name is not stubbed in tests")
+
+    override suspend fun adminApproveEventOptionalNote(id: String, body: OptionalNoteRequestDto) =
+        guard("adminApproveEventOptionalNote") { Response.success(event(id, "confirmed")) }
+    override suspend fun setupStatus() = guard("setupStatus") { Response.success(SetupStatusDto(needsFirstAdmin = false, setupCodeRequired = true)) }
+    override suspend fun setupFirstAdmin(body: FirstAdminRequestDto) = guard("setupFirstAdmin") { notUsed<AuthResponseDto>("setupFirstAdmin") }
+    override suspend fun adminOverview(date: String?) = guard("adminOverview") { Response.success(OverviewDto(workDate = "2026-11-16")) }
+    override suspend fun adminExceptions(from: String?, to: String?, departmentId: String?, kind: String?, page: Int, pageSize: Int) =
+        guard("adminExceptions") { Response.success(PageDto<AttendanceExceptionDto>()) }
+    override suspend fun adminEmployees(search: String?, departmentId: String?, status: String?, role: String?, page: Int, pageSize: Int) =
+        guard("adminEmployees") { Response.success(PageDto(listOf(user))) }
+    override suspend fun adminCreateEmployee(body: EmployeeCreateRequestDto) =
+        guard("adminCreateEmployee") { Response.success(EmployeeCreatedDto(user, "Temp-Pass-1234")) }
+    override suspend fun adminEmployee(id: String) = guard("adminEmployee") { Response.success(EmployeeDetailDto(user)) }
+    override suspend fun adminUpdateEmployee(id: String, body: EmployeeUpdateRequestDto) = guard("adminUpdateEmployee") { Response.success(user) }
+    override suspend fun adminDeactivateEmployee(id: String, body: ReasonRequestDto) = guard("adminDeactivateEmployee") { Response.success(user.copy(status = "inactive")) }
+    override suspend fun adminReactivateEmployee(id: String) = guard("adminReactivateEmployee") { Response.success(user) }
+    override suspend fun adminResetPassword(id: String) = guard("adminResetPassword") { Response.success(TemporaryPasswordDto("Temp-Pass-1234")) }
+    override suspend fun adminChangeRole(id: String, body: RoleRequestDto) = guard("adminChangeRole") { Response.success(user.copy(role = body.role)) }
+    override suspend fun adminExportEmployee(id: String) = guard("adminExportEmployee") { Response.success("{}".toResponseBody()) }
+    override suspend fun adminEraseEmployee(id: String, body: EraseRequestDto) = guard("adminEraseEmployee") { Response.success(EraseResponseDto("erased", id)) }
+    override suspend fun adminDepartments() = guard("adminDepartments") { Response.success(ItemsDto<AdminDepartmentDto>()) }
+    override suspend fun adminCreateDepartment(body: DepartmentCreateRequestDto) =
+        guard("adminCreateDepartment") { Response.success(AdminDepartmentDto("dep1", body.name, body.code)) }
+    override suspend fun adminUpdateDepartment(id: String, body: DepartmentUpdateRequestDto) =
+        guard("adminUpdateDepartment") { Response.success(AdminDepartmentDto(id, body.name ?: "Finance", body.code)) }
+    override suspend fun adminDevices(status: String?, userId: String?, search: String?, page: Int, pageSize: Int) =
+        guard("adminDevices") { Response.success(PageDto<DeviceDto>()) }
+    override suspend fun adminApproveDevice(id: String) = guard("adminApproveDevice") { Response.success(DeviceDto(id, "inst")) }
+    override suspend fun adminRevokeDevice(id: String, body: ReasonRequestDto) = guard("adminRevokeDevice") { Response.success(DeviceDto(id, "inst", status = "revoked")) }
+    override suspend fun adminSessions(
+        from: String?, to: String?, employeeId: String?, departmentId: String?, status: String?, late: Boolean?, manual: Boolean?, page: Int, pageSize: Int,
+    ) = guard("adminSessions") { Response.success(PageDto<SessionDto>()) }
+    override suspend fun adminSession(id: String) = guard("adminSession") { Response.success(SessionDetailDto(SessionDto(id))) }
+    override suspend fun adminCorrectSession(id: String, body: SessionCorrectionRequestDto) = guard("adminCorrectSession") { Response.success(SessionDto(id, corrected = true)) }
+    override suspend fun adminCreateSession(body: SessionCreateRequestDto) = guard("adminCreateSession") { Response.success(SessionDto("s-new", workDate = body.workDate)) }
+    override suspend fun adminManualRequests(status: String?, type: String?, employeeId: String?, from: String?, to: String?, page: Int, pageSize: Int) =
+        guard("adminManualRequests") { Response.success(PageDto<ManualRequestDto>()) }
+    override suspend fun adminApproveRequest(id: String, body: RequestApproveRequestDto) =
+        guard("adminApproveRequest") { Response.success(ManualRequestDto(id, "missed_clock_out", status = "approved")) }
+    override suspend fun adminRejectRequest(id: String, body: ReviewNoteRequestDto) =
+        guard("adminRejectRequest") { Response.success(ManualRequestDto(id, "missed_clock_out", status = "rejected")) }
+    override suspend fun adminReport(report: String, from: String?, to: String?, employeeId: String?, departmentId: String?, status: String?, format: String) =
+        guard("adminReport") { Response.success(ReportDto(report = report)) }
+    override suspend fun adminReportFile(report: String, format: String, from: String?, to: String?, employeeId: String?, departmentId: String?, status: String?) =
+        guard("adminReportFile") { Response.success("col\n".toResponseBody()) }
+    override suspend fun adminWorkplaces() = guard("adminWorkplaces") { Response.success(ItemsDto<WorkplaceDto>()) }
+    override suspend fun adminCreateWorkplace(body: JsonObject) = guard("adminCreateWorkplace") { Response.success(WorkplaceDto("w1", "HQ")) }
+    override suspend fun adminUpdateWorkplace(id: String, body: JsonObject) = guard("adminUpdateWorkplace") { Response.success(WorkplaceDto(id, "HQ")) }
+    override suspend fun adminPolicy() = guard("adminPolicy") { Response.success(PolicyDto()) }
+    override suspend fun adminUpdatePolicy(body: JsonObject) = guard("adminUpdatePolicy") { Response.success(PolicyDto()) }
+    override suspend fun adminRoles() = guard("adminRoles") { Response.success(RolesResponseDto()) }
+    override suspend fun adminAuditLogs(
+        actorId: String?, action: String?, entityType: String?, entityId: String?, from: String?, to: String?, search: String?, page: Int, pageSize: Int,
+    ) = guard("adminAuditLogs") { Response.success(PageDto<AuditLogDto>()) }
+    override suspend fun adminBroadcast(body: BroadcastRequestDto) = guard("adminBroadcast") { Response.success(BroadcastResponseDto(0)) }
 }

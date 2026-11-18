@@ -22,7 +22,8 @@ You need Android 8.0 or newer with Google Play services.
 
 ## 2. Sign in
 
-1. Open **Meridian Attendance**.
+1. Open **Meridian Attendance**. One app serves everyone: employees sign in here,
+   and managers and administrators get an extra **Manage** tab after signing in.
 2. Enter your **employee number** (or work e-mail) and the **temporary password**
    from your administrator.
 3. Choose a new password: at least 10 characters, not containing your employee
@@ -30,6 +31,10 @@ You need Android 8.0 or newer with Google Play services.
 4. This phone is now registered as your attendance device. If you sign in on a new
    phone later, the old phone is signed out automatically, or your administrator
    approves the new phone first.
+
+If the app cannot reach the server, check the **Server** row at the bottom of the
+sign-in screen: it shows the backend address and has a **Test connection** button.
+Only change it if your IT team tells you to — it signs you out.
 
 Forgot your password? Tap **Forgot password**. If e-mail is set up you will receive
 a reset link that is valid for 30 minutes. Otherwise ask your administrator for a

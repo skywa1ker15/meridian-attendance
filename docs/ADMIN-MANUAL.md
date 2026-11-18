@@ -1,7 +1,17 @@
 # Administrator and manager manual
 
-The administrator dashboard runs in a browser at `https://attendance.<domain>/admin/`.
-Use a current Chrome, Edge or Firefox. No installation is needed.
+There are two ways to manage Meridian Attendance, and they do the same things:
+
+* **The Android app** — managers, admins and superadmins sign in with the same
+  single login as employees and get a **Manage** tab. Everything in this manual can
+  be done from the phone: overview, employees, live attendance, records and
+  corrections, the review queue, exceptions, reports and exports, workplaces,
+  policy, departments, devices, roles, audit log and broadcasts.
+* **The web dashboard** at `https://attendance.<domain>/admin/` in a current Chrome,
+  Edge or Firefox. No installation is needed.
+
+Screen names below follow the dashboard; the app uses the same names under
+**Manage**. Each entry only appears when your role allows it.
 
 Screen names follow the build specification (`ARCHITECTURE.md` §6). The dashboard
 team's own notes and screenshots are in `docs/admin-dashboard/`. Where the exact
@@ -15,13 +25,36 @@ permissions, and the dashboard hides actions your role cannot perform.
 | `manager` | View every screen, review pending confirmations and under-review events, approve or reject manual requests and corrections, export reports |
 | `admin` | Everything a manager can do, plus: create, edit and deactivate employees, reset passwords, approve or revoke devices, change workplace, Wi-Fi, policy and departments, assign roles up to `admin`, broadcast notifications |
 | `superadmin` | Everything an admin can do, plus: grant or revoke `superadmin` and erase (pseudonymise) an employee's personal data |
-| `employee` | No dashboard access. Uses the mobile app only. |
+| `employee` | No Manage tab and no dashboard access. Uses the app to confirm their own attendance. |
 
 Keep the number of `admin` and `superadmin` accounts small. Every change made from
 the dashboard is written to the audit log with your name, IP address and the
 before and after values.
 
 ## 2. Signing in
+
+### 2.0 First-run setup and the server address (app)
+
+On a brand-new installation nobody can sign in yet, so the app creates the first
+administrator itself:
+
+1. Install the app and open it. If the backend has no administrator, the login
+   screen shows **Set up Meridian Attendance**.
+2. Tap it, enter the **setup code** from whoever installed the server (the server's
+   `FIRST_ADMIN_SETUP_CODE`; the field is hidden when the server does not need one),
+   your employee number, name, work e-mail and a password, and tap **Create
+   administrator**. You are signed in as `superadmin` and the app offers to set the
+   workplace up straight away.
+3. First-run setup closes permanently once any administrator exists ("This system
+   already has an administrator. Sign in instead.").
+
+The login screen also has a **Server** row. It shows which backend the app talks to
+and opens a dialog to change it, with **Test connection** (`GET /healthz`). Release
+builds accept `https://` only; debug builds also accept `http://` for testing on the
+office network. Changing the server signs the device out. Profile shows the active
+server too.
+
+### 2.1 Dashboard
 
 1. Open `/admin/` and enter your e-mail or employee number and password.
 2. On first login, or after a password reset, you must set a new password. It needs
@@ -136,6 +169,16 @@ Late, absence and overtime figures depend on the policy settings (§3.10). If th
 policy is wrong, the reports are wrong.
 
 ### 3.10 Workplace configuration (admin)
+
+In the app this screen adds two shortcuts that the browser cannot offer: **Use my
+current location** takes a fresh high-accuracy GPS fix at the office, fills the
+latitude and longitude and shows the accuracy (it warns above 30 m — stand outside
+near the entrance for a better fix), and **Use current Wi-Fi** fills the SSID and
+the BSSID of the access point the phone is connected to. Saving bumps the
+configuration version, and the phone you saved from re-registers its own geofence
+immediately. The "coordinates not confirmed" warning stays visible until you set
+real coordinates and tick **Coordinates confirmed**.
+
 - **Workplace**: name, address, latitude and longitude, radius (m), accuracy
   threshold (m), dwell seconds, exit debounce seconds, entry and exit detection
   toggles, active flag. The seeded coordinates are **placeholders**. Replace them

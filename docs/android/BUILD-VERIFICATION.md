@@ -101,13 +101,22 @@ tools/core-check && tools/syntax-check     # optional offline sanity checks
 
 ## 4. Known gaps / decisions to confirm
 
+* Manage screens are verified by CI (`assembleDebug`, unit tests, lint) and the DTO contract tests, not yet by
+  instrumented UI tests or a run against a live backend on a phone.
+
 * `coordinates_confirmed` is read from `/config/workplaces` but is not listed in `docs/API.md` §3. The app never
   registers geofences when it is `false`; if the backend omits it, the app treats coordinates as confirmed only
   when they are valid and non-zero. Backend + API.md should add the field.
 * `confirmation_reminder_minutes` (local re-notification of pending confirmations) is not in the §8 policy
   object; the app defaults to 15 minutes when absent.
-* Admin screens use `GET /admin/attendance/events?status=under_review|pending` for "Pending confirmations" and
-  `GET /admin/attendance/live` for live attendance; other admin features remain in the web dashboard.
+* The app is now standalone for administrators too: the **Manage** section covers every `docs/API.md` §7
+  endpoint (overview, employees, departments, devices, records and corrections, review queue, manual requests,
+  exceptions, reports with CSV/XLSX/PDF export, workplaces, policy, roles, audit log, broadcast) plus §0
+  first-run setup. The web dashboard remains available and is unchanged.
+* The backend address is a user setting (login screen → **Server**, also shown in Profile), persisted in
+  DataStore and applied by an OkHttp interceptor, so Retrofit is built once; release builds refuse `http://`.
+* Report and POPIA downloads are written to `cacheDir/exports/` and shared through the manifest's FileProvider
+  (`${applicationId}.fileprovider`, `res/xml/file_paths.xml`).
 * Battery optimisation: the app opens the system list (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`) rather
   than requesting `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, which Google Play restricts.
 * Play Integrity is a declared dependency and `POST /devices/me/integrity` is in the API interface, but no
