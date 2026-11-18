@@ -29,19 +29,20 @@ awaiting real-world validation · **C** awaiting company-specific configuration 
 
 | Area | Status | Evidence / notes |
 |------|--------|------------------|
-| Backend API (auth, devices, attendance, sync, manual requests, notifications, admin, reports) | **A** | 120 pytest tests pass against PostgreSQL 16 |
+| Backend API (auth, invitations, devices, attendance, sync, manual requests, notifications, admin, reports) | **A** | 232 pytest tests pass against PostgreSQL 16 |
 | Database schema, constraints, migrations | **A** | Alembic upgrade → downgrade → upgrade verified; `alembic check` shows no drift |
 | Verification engine, scheduler (expiry, missing clock-outs, retention), audit log | **A** | covered by pytest; scheduler advisory lock tested |
 | Security controls (auth, refresh rotation + reuse detection, RBAC, rate limits, replay/idempotency, headers) | **A** | pytest security suite + live spot checks; OWASP mapping in `docs/SECURITY.md` |
 | Reports: 11 types × JSON/CSV/XLSX/PDF | **A** | pytest generates every combination; CSV download tested in the browser |
 | Administrator dashboard (all 12 screens + login/reset) | **A** | 26/26 Playwright end-to-end tests against the live backend; 21 unit tests; 24 smoke checks |
-| Android ↔ backend contract | **A** | 33/33 app endpoints exist on the server; 28/28 live round-trip checks using the app's own DTOs |
-| Android pure-Kotlin logic (verification, exit debounce, outbox, time) | **A** | 60/60 tests via `android/tools/core-check` |
+| Android ↔ backend contract | **A** | live round trip using the app's own DTOs: 63/63 checks (employee flow, Manage section, invitation → activation → login) |
+| Android pure-Kotlin logic (verification, exit debounce, outbox, time, phone/password validation, deep links) | **A** | 83/83 tests via `android/tools/core-check` |
 | Android app — full source (screens, detection, Room, sync, FCM, Keystore) | **B** | written and syntax/resource checked; **not compiled with Gradle yet** (sandbox had no Google/Maven access) |
 | Android debug / release APK, AAB | **B / C** | built by `.github/workflows/android.yml` on first push; signed builds need Meridian's keystore + production URL |
 | Geofence behaviour on real phones (arrival, departure, battery saver, reboot) | **B** | **not yet tested on devices** — `docs/PILOT-TEST-PLAN.md` |
 | Push notifications (FCM) | **C** | implemented; needs Firebase project + service account. In-app inbox works without it |
-| Password-reset email | **C** | implemented; needs SMTP. Admins can issue temporary passwords meanwhile |
+| Employee invitations + password reset by emailed link | **B** | implemented and tested end to end against a live server; **C** for delivery — needs Meridian's Microsoft 365 app registration (`docs/EMAIL-SETUP.md`) |
+| Email delivery (Microsoft Graph, SMTP fallback) | **C** | implemented; needs the Entra app registration. Until then admins issue temporary passwords or pass the invitation link on by hand |
 | Production deployment | **C** | `deploy/` prepared and `docker compose config` validated; **not deployed** |
 | Google Play internal testing / managed distribution | **C** | **not published** — needs Play Console account and approval |
 | Workplace coordinates, Wi-Fi, employment policy, official logo | **C** | placeholders only (`docs/CONFIGURATION-REQUIRED.md`) |

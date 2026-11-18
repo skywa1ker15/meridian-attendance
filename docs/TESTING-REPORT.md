@@ -1,6 +1,6 @@
 # Testing report — Meridian Attendance v1.0.0
 
-Date: 17 November 2026. Environment: Linux build sandbox, Python 3.13, PostgreSQL 16,
+Date: 18 November 2026. Environment: Linux build sandbox, Python 3.13, PostgreSQL 16,
 Chromium (Playwright 1.63), kotlinc 2.3.0, JDK 21. Every result below was produced by
 actually running the command shown; nothing is reported from code reading alone.
 
@@ -8,7 +8,7 @@ actually running the command shown; nothing is reported from code reading alone.
 
 | Suite | Command | Result |
 |-------|---------|--------|
-| Backend unit/integration/security | `cd backend && pytest -q` | **120 passed**, 0 failed |
+| Backend unit/integration/security | `cd backend && pytest -q` | **232 passed**, 0 failed |
 | Backend lint | `cd backend && ruff check .` | clean |
 | Migrations | `alembic upgrade head && alembic downgrade base && alembic upgrade head && alembic check` | clean, no model drift |
 | Production entrypoint | `backend/docker-entrypoint.sh` (run locally, not in a container) | migrates, starts gunicorn; `/healthz`, `/readyz`, `/admin/` → 200 |
@@ -16,10 +16,10 @@ actually running the command shown; nothing is reported from code reading alone.
 | Dashboard unit | `npm run test:unit` | 21/21 pass |
 | Dashboard smoke (API down) | `npm run smoke` | 24/24 pass |
 | Dashboard end-to-end (live backend) | `npm run test:e2e` | **26/26 pass** |
-| Android core logic | `android/tools/core-check` | **60/60 pass** |
+| Android core logic | `android/tools/core-check` | **83/83 pass** |
 | Android source check | `android/tools/syntax-check` | OK (see limits below) |
 | Android ↔ backend endpoints | OpenAPI vs `AttendanceApi.kt` | 33/33 endpoints exist |
-| Android ↔ backend live round trip | `android/tools/contract-roundtrip/run` | **28/28 pass** |
+| Android ↔ backend live round trip | `android/tools/contract-roundtrip/run` | **63/63 pass** |
 | Live security spot checks | curl against running server | pass (see §4) |
 
 ## 1. Backend (pytest, real PostgreSQL)
@@ -88,6 +88,8 @@ rejected.
 | 5 | Backend agent | Empty `CORS_ORIGINS=` in env files crashed settings loading | Parses as empty list |
 | 6 | Dashboard smoke | Employee profile dead-ended when loading failed | Back link added |
 | 7 | Deploy config check | Compose expanded the backup loop's shell variables | Escaped |
+| 8 | Integrator review, live server | An employee invited while email was unconfigured was stranded: no password, no email, no recoverable link | The admin now receives the invitation link in the response when the email could not be sent; withheld when it was sent. 3 regression tests |
+| 9 | Android agent | `requiresLogout` treated any `token_invalid` as a session failure, so an expired invitation or reset link (HTTP 400) would sign an administrator out mid-session | Only 401/403 can force a logout |
 
 ## 6. Not tested (and why)
 
