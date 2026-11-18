@@ -69,8 +69,14 @@ res_names = {"string": set(), "drawable": set(), "color": set(), "mipmap": set()
 for f in glob.glob(os.path.join(app, "src/*/res/values*/*.xml")):
     dom = xml.dom.minidom.parse(f)
     for tag, kind in (("string", "string"), ("color", "color"), ("style", "style")):
+        seen = set()
         for n in dom.getElementsByTagName(tag):
-            res_names[kind].add(n.getAttribute("name"))
+            name = n.getAttribute("name")
+            # aapt2 refuses a resource declared twice in one file ("Found item String/x more than one time").
+            if name in seen:
+                failures.append(f"Duplicate <{tag} name=\"{name}\"> in {os.path.relpath(f, root)}")
+            seen.add(name)
+            res_names[kind].add(name)
 for kind in ("drawable", "mipmap", "xml"):
     for f in glob.glob(os.path.join(app, f"src/*/res/{kind}*/*")):
         res_names[kind].add(os.path.splitext(os.path.basename(f))[0])

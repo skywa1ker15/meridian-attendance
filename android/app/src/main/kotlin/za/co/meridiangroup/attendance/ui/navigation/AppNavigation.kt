@@ -63,6 +63,14 @@ import za.co.meridiangroup.attendance.ui.admin.overview.ManageHomeScreen
 import za.co.meridiangroup.attendance.ui.admin.overview.ManageHomeViewModel
 import za.co.meridiangroup.attendance.ui.admin.review.AdminReviewScreen
 import za.co.meridiangroup.attendance.ui.admin.review.AdminReviewViewModel
+import za.co.meridiangroup.attendance.ui.admin.exceptions.ExceptionsScreen
+import za.co.meridiangroup.attendance.ui.admin.exceptions.ExceptionsViewModel
+import za.co.meridiangroup.attendance.ui.admin.records.AdminSessionScreen
+import za.co.meridiangroup.attendance.ui.admin.records.AdminSessionViewModel
+import za.co.meridiangroup.attendance.ui.admin.records.RecordsScreen
+import za.co.meridiangroup.attendance.ui.admin.records.RecordsViewModel
+import za.co.meridiangroup.attendance.ui.admin.reports.ReportsScreen
+import za.co.meridiangroup.attendance.ui.admin.reports.ReportsViewModel
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordScreen
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordViewModel
 import za.co.meridiangroup.attendance.ui.auth.LoginScreen
@@ -375,6 +383,32 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
             composable(Routes.MANAGE_REVIEW) {
                 Gated(ServerPermissions.canReview(permissions)) {
                     AdminReviewScreen(graphViewModel(key = "review") { AdminReviewViewModel(it.adminRepository) })
+                }
+            }
+            composable(Routes.MANAGE_RECORDS) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    RecordsScreen(
+                        viewModel = graphViewModel(key = "records") { RecordsViewModel(it.adminRepository, it.now) },
+                        repo = graph.adminRepository,
+                        permissions = permissions,
+                        onOpenSession = { id -> nav.navigate(Routes.manageSession(id)) },
+                    )
+                }
+            }
+            composable(Routes.MANAGE_SESSION, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                Gated(ServerPermissions.canRead(permissions)) {
+                    AdminSessionScreen(graphViewModel(key = "admin-session-$id") { AdminSessionViewModel(it.adminRepository, id) }, permissions)
+                }
+            }
+            composable(Routes.MANAGE_EXCEPTIONS) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    ExceptionsScreen(graphViewModel(key = "exceptions") { ExceptionsViewModel(it.adminRepository, it.now) })
+                }
+            }
+            composable(Routes.MANAGE_REPORTS) {
+                Gated(ServerPermissions.canExport(permissions)) {
+                    ReportsScreen(graphViewModel(key = "reports") { ReportsViewModel(it, it.now) })
                 }
             }
         }
