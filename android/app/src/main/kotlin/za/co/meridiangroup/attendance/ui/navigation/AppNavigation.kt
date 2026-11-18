@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,7 +52,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import za.co.meridiangroup.attendance.R
+import za.co.meridiangroup.attendance.core.AppLink
+import za.co.meridiangroup.attendance.core.AppLinkKind
+import za.co.meridiangroup.attendance.core.AppLinks
 import za.co.meridiangroup.attendance.core.ServerPermissions
+import za.co.meridiangroup.attendance.core.ServerUrls
 import za.co.meridiangroup.attendance.data.repository.SessionState
 import za.co.meridiangroup.attendance.ui.admin.NoPermission
 import za.co.meridiangroup.attendance.ui.admin.employees.EmployeeProfileScreen
@@ -85,10 +92,14 @@ import za.co.meridiangroup.attendance.ui.admin.roles.RolesScreen
 import za.co.meridiangroup.attendance.ui.admin.roles.RolesViewModel
 import za.co.meridiangroup.attendance.ui.admin.workplaces.WorkplacesScreen
 import za.co.meridiangroup.attendance.ui.admin.workplaces.WorkplacesViewModel
+import za.co.meridiangroup.attendance.ui.auth.ActivationScreen
+import za.co.meridiangroup.attendance.ui.auth.ActivationViewModel
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordScreen
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordViewModel
 import za.co.meridiangroup.attendance.ui.auth.LoginScreen
 import za.co.meridiangroup.attendance.ui.auth.LoginViewModel
+import za.co.meridiangroup.attendance.ui.auth.ResetPasswordScreen
+import za.co.meridiangroup.attendance.ui.auth.ResetPasswordViewModel
 import za.co.meridiangroup.attendance.ui.auth.SetupScreen
 import za.co.meridiangroup.attendance.ui.auth.SetupViewModel
 import za.co.meridiangroup.attendance.ui.common.graphViewModel
@@ -172,7 +183,12 @@ private val managerTabs = listOf(
     Tab(Routes.PROFILE, R.string.nav_profile, Icons.Outlined.Person),
 )
 
-/** Root: login → forced password change → onboarding → main app. */
+/**
+ * Root: invitation / reset link → login → forced password change → onboarding → main app.
+ *
+ * An emailed link is handled before anything else: it carries its own token and (for https links) the
+ * server it came from, so a brand-new install can activate without anybody typing a server address.
+ */
 @Composable
 fun AppRoot(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Unit) {
     val graph = rememberGraph()
@@ -180,10 +196,65 @@ fun AppRoot(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Unit) {
     val onboardingDone by graph.prefs.onboardingDoneFlow.collectAsState(initial = true)
     val user by graph.prefs.userFlow.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
+    var link by rememberSaveable(stateSaver = AppLinkSaver) { mutableStateOf<AppLink?>(null) }
+    var switchPrompt by rememberSaveable(stateSaver = AppLinkSaver) { mutableStateOf<AppLink?>(null) }
+    var openForgotOnLogin by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(pendingDeepLink) {
+        val parsed = AppLinks.parse(pendingDeepLink?.data?.toString(), graph.serverConfigRepository.allowCleartext) ?: return@LaunchedEffect
+        onDeepLinkConsumed()
+        val repo = graph.serverConfigRepository
+        val root = parsed.serverRoot
+        when {
+            // Custom-scheme link, or a link from the server the app already talks to.
+            root == null || root == repo.root.value -> link = parsed
+            // Nothing configured and nobody signed in: adopt the server the link came from.
+            repo.isDefault && !graph.tokenStore.isLoggedIn -> { repo.apply(root); link = parsed }
+            // A different server is configured: say which one the link is for and ask first.
+            else -> switchPrompt = parsed
+        }
+    }
+
+    switchPrompt?.let { prompt ->
+        ServerSwitchDialog(
+            linkRoot = prompt.serverRoot.orEmpty(),
+            currentRoot = graph.serverConfigRepository.root.collectAsState().value,
+            onConfirm = {
+                switchPrompt = null
+                scope.launch {
+                    if (graph.tokenStore.isLoggedIn) graph.authRepository.logout()
+                    prompt.serverRoot?.let { graph.serverConfigRepository.apply(it) }
+                    link = prompt
+                }
+            },
+            onDismiss = { switchPrompt = null },
+        )
+    }
+
+    link?.let { active ->
+        when (active.kind) {
+            AppLinkKind.INVITE -> {
+                val vm = graphViewModel(key = "activate-${active.token}") { g -> ActivationViewModel(g, active.token) }
+                ActivationScreen(vm, onBackToLogin = { link = null }, onActivated = { link = null })
+            }
+            AppLinkKind.RESET -> {
+                val vm = graphViewModel(key = "reset-${active.token}") { g -> ResetPasswordViewModel(g, active.token) }
+                ResetPasswordScreen(
+                    vm,
+                    onBackToLogin = { link = null },
+                    onRequestNewLink = { link = null; openForgotOnLogin = true },
+                )
+            }
+        }
+        return
+    }
 
     when (val s = session) {
         SessionState.LoggedOut -> {
             val vm = graphViewModel(key = "login") { g -> LoginViewModel(g.authRepository) { g.onSessionActive() } }
+            LaunchedEffect(openForgotOnLogin) {
+                if (openForgotOnLogin) { vm.openForgot(); openForgotOnLogin = false }
+            }
             var setup by rememberSaveable { mutableStateOf<Boolean?>(null) }
             val codeRequired = setup
             if (codeRequired != null) {
@@ -462,6 +533,36 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
             }
         }
     }
+}
+
+/** Survives rotation while an invitation / reset link is open. */
+private val AppLinkSaver = Saver<AppLink?, String>(
+    save = { it?.let { l -> listOf(l.kind.name, l.token, l.serverRoot.orEmpty()).joinToString("\u0000") } },
+    restore = { value ->
+        value.split("\u0000").takeIf { it.size == 3 }
+            ?.let { AppLink(AppLinkKind.valueOf(it[0]), it[1], it[2].ifBlank { null }) }
+    },
+)
+
+/** The link points at a different backend than the one this phone is set up for: ask before switching. */
+@Composable
+private fun ServerSwitchDialog(linkRoot: String, currentRoot: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.link_server_title)) },
+        text = {
+            Text(
+                stringResource(R.string.link_server_body, ServerUrls.display(linkRoot), ServerUrls.display(currentRoot)),
+                modifier = Modifier.testTag("link_server_body"),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, modifier = Modifier.testTag("link_server_switch")) {
+                Text(stringResource(R.string.link_server_switch))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.link_server_keep)) } },
+    )
 }
 
 /** Renders [content] only when the server granted the permission; otherwise an explanatory empty state. */

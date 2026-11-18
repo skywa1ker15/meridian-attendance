@@ -53,6 +53,33 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="meridianattendance" />
             </intent-filter>
+            <!--
+              Invitation / password-reset links. The server address is configurable, so no single host can be
+              verified as an App Link; see docs/android/DEEP-LINKS.md.
+              1) The custom scheme always works and is what the web page's "Open in the app" button fires.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="meridian" android:host="invite" />
+                <data android:scheme="meridian" android:host="reset" />
+            </intent-filter>
+            <!--
+              2) The https(/http) links in the emails themselves. autoVerify="false" with a wildcard host:
+                 Android cannot verify every self-hosted server, so the app is offered in the chooser.
+                 The host wildcard is needed for the path prefixes to be honoured at all.
+            -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+                <data android:host="*" />
+                <data android:pathPrefix="/app/invite" />
+                <data android:pathPrefix="/app/reset" />
+            </intent-filter>
         </activity>
 
         <!-- Geofence transitions from Play services (PendingIntent target; survives the app process being killed). -->

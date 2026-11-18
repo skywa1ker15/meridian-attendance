@@ -24,7 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -39,9 +41,9 @@ import za.co.meridiangroup.attendance.AppGraph
 import za.co.meridiangroup.attendance.BuildConfig
 import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.ApiResult
+import za.co.meridiangroup.attendance.core.PhoneNumbers
 import za.co.meridiangroup.attendance.core.StatusTone
 import za.co.meridiangroup.attendance.core.StatusTones
-import za.co.meridiangroup.attendance.core.Validation
 import za.co.meridiangroup.attendance.data.remote.dto.DeviceDto
 import za.co.meridiangroup.attendance.data.remote.dto.UserDto
 import za.co.meridiangroup.attendance.ui.components.Banner
@@ -85,11 +87,13 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
         }
     }
 
+    /** The number is normalised to +27… before it is sent, exactly as the server would store it. */
     fun updatePhone(phone: String, onDone: () -> Unit) {
-        Validation.phone(phone)?.let { message.value = it; return }
+        PhoneNumbers.error(phone, required = true)?.let { message.value = it; return }
+        val normalised = PhoneNumbers.normalise(phone) ?: return
         viewModelScope.launch {
             savingPhone.value = true
-            val r = graph.authRepository.updatePhone(phone)
+            val r = graph.authRepository.updatePhone(normalised)
             savingPhone.value = false
             message.value = if (r is ApiResult.Success) "Phone number updated." else r.userMessage()
             if (r is ApiResult.Success) onDone()
@@ -138,11 +142,11 @@ fun ProfileScreen(
             Text(user?.fullName ?: "—", style = MaterialTheme.typography.titleLarge)
             KeyValueRow(stringResource(R.string.profile_employee_number), user?.employeeNumber ?: "—")
             KeyValueRow(stringResource(R.string.profile_email), user?.email ?: "—")
-            KeyValueRow(stringResource(R.string.profile_phone), user?.phone ?: "—")
+            KeyValueRow(stringResource(R.string.profile_phone), PhoneNumbers.display(user?.phone) ?: "—")
             KeyValueRow(stringResource(R.string.profile_department), user?.department?.name ?: "—")
             KeyValueRow(stringResource(R.string.profile_role), StatusTones.label(user?.role))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                PillButton(stringResource(R.string.profile_edit_phone), { phoneInput = user?.phone.orEmpty(); editPhone = true }, style = PillStyle.OUTLINE)
+                PillButton(stringResource(R.string.profile_edit_phone), { phoneInput = PhoneNumbers.display(user?.phone).orEmpty(); editPhone = true }, style = PillStyle.OUTLINE)
                 PillButton(stringResource(R.string.profile_request_correction), onRequestCorrection, style = PillStyle.GHOST)
             }
         }
@@ -196,7 +200,16 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { editPhone = false },
             title = { Text(stringResource(R.string.profile_edit_phone)) },
-            text = { OutlinedTextField(phoneInput, { phoneInput = it }, label = { Text(stringResource(R.string.profile_phone)) }, singleLine = true) },
+            text = {
+                OutlinedTextField(
+                    phoneInput, { phoneInput = it },
+                    label = { Text(stringResource(R.string.profile_phone)) },
+                    singleLine = true,
+                    supportingText = { Text(stringResource(R.string.activation_phone_hint)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.testTag("profile_phone_input"),
+                )
+            },
             confirmButton = { TextButton(onClick = { viewModel.updatePhone(phoneInput) { editPhone = false } }, enabled = !savingPhone) { Text(stringResource(R.string.action_save)) } },
             dismissButton = { TextButton(onClick = { editPhone = false }) { Text(stringResource(R.string.action_cancel)) } },
         )

@@ -104,7 +104,8 @@ class _TokenCache:
         with self._lock:
             self._token = token
             self._key = key
-            self._expires_at = now + max(expires_in - TOKEN_SAFETY_MARGIN_SECONDS, 30)
+            # A token whose life is shorter than the margin is simply not cached.
+            self._expires_at = now + expires_in - TOKEN_SAFETY_MARGIN_SECONDS
         return token
 
 
@@ -173,7 +174,7 @@ def _send_via_graph(settings: Settings, *, to: str, subject: str, text_body: str
         # same endpoint is how both a plain-text and an HTML alternative get sent.
         mime = build_mime(sender=sender, sender_name=settings.email_sender_name, to=to, subject=subject, text_body=text_body, html_body=html_body)
         content = base64.b64encode(mime.as_bytes()).decode("ascii")
-        url = GRAPH_SENDMAIL_URL.format(sender=quote(sender))
+        url = GRAPH_SENDMAIL_URL.format(sender=quote(sender, safe="@"))
 
         def _post(bearer: str) -> httpx.Response:
             with httpx.Client(timeout=settings.email_timeout_seconds) as client:

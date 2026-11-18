@@ -17,6 +17,8 @@ data class LoginUiState(
     val identifierError: String? = null,
     val passwordError: String? = null,
     val formError: String? = null,
+    /** 401 invitation_pending: HR invited this employee but they have not opened the link yet. */
+    val invitationPending: Boolean = false,
     val loading: Boolean = false,
     val forgotOpen: Boolean = false,
     val forgotIdentifier: String = "",
@@ -55,8 +57,8 @@ class LoginViewModel(private val auth: AuthRepository, private val onLoggedIn: (
         checkSetupStatus()
     }
 
-    fun onIdentifier(v: String) = _state.update { it.copy(identifier = v, identifierError = null, formError = null) }
-    fun onPassword(v: String) = _state.update { it.copy(password = v, passwordError = null, formError = null) }
+    fun onIdentifier(v: String) = _state.update { it.copy(identifier = v, identifierError = null, formError = null, invitationPending = false) }
+    fun onPassword(v: String) = _state.update { it.copy(password = v, passwordError = null, formError = null, invitationPending = false) }
 
     fun submit() {
         val s = _state.value
@@ -67,14 +69,20 @@ class LoginViewModel(private val auth: AuthRepository, private val onLoggedIn: (
             _state.update { it.copy(identifierError = idErr, passwordError = pwErr) }
             return
         }
-        _state.update { it.copy(loading = true, formError = null) }
+        _state.update { it.copy(loading = true, formError = null, invitationPending = false) }
         viewModelScope.launch {
             when (val r = auth.login(s.identifier, s.password)) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(loading = false, password = "", loggedIn = true) }
                     onLoggedIn()
                 }
-                else -> _state.update { it.copy(loading = false, formError = r.userMessage()) }
+                else -> _state.update {
+                    it.copy(
+                        loading = false,
+                        formError = r.userMessage(),
+                        invitationPending = (r as? ApiResult.Failure)?.failure?.code == "invitation_pending",
+                    )
+                }
             }
         }
     }
