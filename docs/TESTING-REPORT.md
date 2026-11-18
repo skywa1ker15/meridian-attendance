@@ -97,7 +97,7 @@ rejected.
 * **Android build artefacts** — APK/AAB are produced by CI, not here.
 * **Docker images and Caddy** — no Docker daemon in the sandbox; compose files pass
   `docker compose config`; run `caddy validate` once on the server.
-* **FCM push, SMTP email, Play Integrity** — need Meridian's credentials.
+* **FCM push, e-mail delivery (Microsoft Graph / SMTP), Play Integrity** — need Meridian's credentials. The Graph sender is covered by tests against a monkeypatched transport, not against the live tenant.
 * **XLSX/PDF downloads in the browser** — generation is tested in pytest; only CSV
   download is tested end-to-end.
 * **Load testing** and an independent **penetration test** — recommended before

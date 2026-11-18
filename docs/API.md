@@ -83,6 +83,54 @@ Lets the Android app create the very first administrator on an empty installatio
 ```
 Errors: `409 setup_complete` (an admin already exists — permanently closed), `403 setup_disabled` (staging/production server without `FIRST_ADMIN_SETUP_CODE`), `403 invalid_setup_code`, `409 conflict` (email/number taken), `422 validation_error` (password policy). Shares the login rate limit; audit-logged.
 
+## 0b. Invitation & activation (no authentication)
+
+Employees do **not** register themselves. An administrator creates the account and the
+server emails a one-time invitation link; the employee chooses their own password and
+confirms their mobile number in the app. Until then the account has no password at all,
+so nobody can sign in as them.
+
+The emailed link points at `GET {public_base_url}/app/invite?token=…` (see §10), which
+opens the app and hands it the token.
+
+### GET `/auth/invitation?token=…`
+What the activation screen shows. No authentication.
+```json
+{
+  "employee_number": "MG-0042", "first_name": "Thandi", "last_name": "Naidoo",
+  "email": "t.naidoo@meridiangroup.co.za", "phone": null,
+  "department": { "id": "uuid", "name": "Finance" } | null,
+  "expires_at": "2026-11-25T08:00:00Z"
+}
+```
+Errors: `400 {"error":{"code":"token_invalid"}}` when the token is unknown, expired,
+already used, or the account is not active. Nothing about the account is revealed for a
+bad token.
+
+### POST `/auth/invitation/accept`
+```json
+{ "token": "from the link", "phone": "082 123 4567", "password": "chosen by the employee",
+  "device": { …same optional device object as login… } }
+```
+Response `201` — **exactly the same body as `POST /auth/login`** (`access_token`,
+`refresh_token`, `token_type`, `expires_in`, `must_change_password`, `user`, `device`).
+The employee is signed in; no second login call is needed.
+
+Sets the password (same policy as everywhere, and it may not contain the employee's own
+name, number or email), stores the phone **normalised to E.164** (`+27821234567`), marks
+the token used and invalidates any other outstanding invitation for that employee.
+
+Errors: `400 token_invalid` (unknown/expired/used/inactive account),
+`422 validation_error` with `details.fields.new_password` (password policy) or
+`details.fields.phone = "invalid_phone"` (phone format).
+
+**Phone numbers.** Everywhere the API accepts a `phone` (`/auth/invitation/accept`,
+`PATCH /auth/me`, `POST /admin/employees`, `PATCH /admin/employees/{id}`) it accepts
+South African numbers written as `0821234567`, `082 123 4567`, `+27821234567` or
+`0027821234567` — mobile or landline — and always stores and returns
+`+27` followed by the nine national digits. Anything else is `422 validation_error`
+with `fields.phone = "invalid_phone"`.
+
 ## 1. Authentication
 
 ### POST `/auth/login`
@@ -107,7 +155,12 @@ Response `200`:
   "device": { ...Device } | null
 }
 ```
-Errors: `401 invalid_credentials`, `403 account_inactive`, `403 device_revoked`, `423 account_locked`.
+Errors: `401 invalid_credentials`, `401 invitation_pending`, `403 account_inactive`, `403 device_revoked`, `423 account_locked`.
+`invitation_pending` means the account exists but has never been activated:
+```json
+{ "error": { "code": "invitation_pending", "message": "Your account hasn't been set up yet. Open the invitation link we emailed you, or ask your manager to resend it.", "details": {} } }
+```
+Show that message and offer *Ask my manager to resend the invitation*.
 Rate limit: 10 / minute / IP, 5 failed attempts → 15 minute lock (configurable).
 
 **User object**
@@ -143,8 +196,9 @@ Password policy: ≥ 10 characters, not equal to identifier, not in the 10 000 m
 common passwords list, checked server‑side.
 
 ### POST `/auth/password/forgot` `{ "identifier" }` → `202` always (anti‑enumeration).
-If SMTP is configured an email with a 30‑minute reset link/token is sent.
-Administrators can also issue a temporary password from the dashboard.
+If email is configured a 30‑minute reset link is sent (`{public_base_url}/app/reset?token=…`,
+which opens the app — see §10). Administrators can also issue a temporary password from the
+dashboard.
 
 ### POST `/auth/password/reset` `{ "token", "new_password" }` → `204`
 
@@ -365,7 +419,12 @@ Values are computed from the database — never fabricated.
 
 ### Employees
 * `GET /admin/employees?search=&department_id=&status=&role=&page=&page_size=` → paginated User (+ `last_attendance_status`, `active_device`)
-* `POST /admin/employees` `{ employee_number, first_name, last_name, email, phone?, department_id?, role?="employee", temporary_password? }` → `201 { "user": User, "temporary_password": "shown once" }`
+* `POST /admin/employees` `{ employee_number, first_name, last_name, email, phone?, department_id?, role?="employee", temporary_password?, send_invitation? }` → `201`
+  * `send_invitation` defaults to **true** when email sending is configured on the server, otherwise **false**. `phone` is optional here — the employee supplies it when they activate.
+  * Invited: `{ "user": User, "invitation": { "sent": true, "expires_at": "…" } }` — **no** `temporary_password`, the account has no password yet, `status` stays `active` and `must_change_password` is `false`.
+  * Not invited: `{ "user": User, "temporary_password": "shown once", "invitation": null }` (unchanged behaviour; `must_change_password` is `true`).
+  * `422 validation_error` if both `send_invitation: true` and `temporary_password` are supplied.
+* `POST /admin/employees/{id}/invite` → `200 { "sent": bool, "expires_at": "…" }` (`employees:write`) — re-issues the invitation and invalidates any earlier unused one. `409 invalid_state` when the account already has a password (use reset-password instead); `400 invalid_state` when it is deactivated or erased. `sent: false` means no email provider is configured or the provider refused it.
 * `GET /admin/employees/{id}` → `{ "user": User, "devices": [Device], "today": TodaySummary, "stats_30d": { "present_days", "late_days", "absent_days", "worked_minutes", "manual_requests" } }`
 * `PATCH /admin/employees/{id}` `{ first_name?, last_name?, email?, phone?, department_id?, employee_number? }` → User
 * `POST /admin/employees/{id}/deactivate` `{ "reason" }` → User (revokes devices & tokens)
@@ -374,6 +433,10 @@ Values are computed from the database — never fabricated.
 * `POST /admin/employees/{id}/role` `{ "role" }` → User (`roles:write`; `superadmin` needs `roles:superadmin`)
 * `GET /admin/employees/{id}/export` → full JSON export of the employee's personal data (POPIA access request)
 * `POST /admin/employees/{id}/erase` `{ "confirm_employee_number", "reason" }` → `202` — pseudonymises personal data after retention checks (`roles:superadmin`)
+
+### Email (`employees:write`)
+* `GET /admin/email/status` → `{ "provider": "graph"|"smtp"|"none", "configured": bool, "sender": "attendance@meridiangroup.co.za" }`
+* `POST /admin/email/test` → `{ "sent": bool, "detail": "…" }` — sends a test message to the **caller's own** address. Rate-limited (3 / minute / IP by default). See `docs/EMAIL-SETUP.md`.
 
 ### Departments
 `GET /admin/departments` → `{ "items": [ { "id", "name", "code", "active", "employee_count", "created_at" } ] }`,
@@ -459,3 +522,26 @@ Nothing in the policy is an assertion of Meridian's employment rules — all val
 * `GET /metrics` → Prometheus text format; when `METRICS_TOKEN` is set it requires
   `Authorization: Bearer <METRICS_TOKEN>`. Metrics: `meridian_http_requests_total{method,route,status}`,
   `meridian_http_request_duration_seconds` (histogram), `meridian_ready` (gauge 1/0).
+
+
+---
+
+## 10. Public pages outside `/api/v1` (deep links)
+
+These are served by the API itself, need no authentication, and exist so an emailed
+link opens the **app** rather than a browser form.
+
+* `GET /app/invite?token=…` → `200 text/html`. Tries to open the app
+  (`intent://invite?token=…#Intent;scheme=meridianattendance;package=<ANDROID_PACKAGE_NAME>;end`),
+  shows **Open in the Meridian Attendance app**, and — when `APK_DOWNLOAD_URL` is set —
+  a link to install the app.
+* `GET /app/reset?token=…` → `200 text/html`. Same, with **Continue in your browser**
+  pointing at `{public_base_url}/admin/#/reset-password?token=…`.
+* A missing `token` renders a short "link incomplete" page (still `200`).
+* `GET /.well-known/assetlinks.json` → the raw contents of the `ANDROID_ASSET_LINKS_JSON`
+  setting, so Android App Links can be verified; `404` while that setting is empty or not
+  valid JSON.
+
+The app should register an intent filter for both the `https://<host>/app/invite` and
+`/app/reset` App Links **and** the `meridianattendance://invite` / `://reset` scheme, and
+read the `token` query parameter from either.

@@ -20,25 +20,49 @@ Your IT department will tell you which of these applies:
 
 You need Android 8.0 or newer with Google Play services.
 
-## 2. Sign in
+## 2. Set up your account
 
-1. Open **Meridian Attendance**. One app serves everyone: employees sign in here,
-   and managers and administrators get an extra **Manage** tab after signing in.
-2. Enter your **employee number** (or work e-mail) and the **temporary password**
-   from your administrator.
-3. Choose a new password: at least 10 characters, not containing your employee
-   number or e-mail, and not a common password.
-4. This phone is now registered as your attendance device. If you sign in on a new
+You do not create your own account — your administrator creates it and you receive
+an e-mail titled **"Set up your Meridian Attendance account"**.
+
+1. Install the app first (section 1).
+2. Open the e-mail on your phone and tap the link. It opens the Meridian Attendance
+   app. (If it opens a web page instead, tap **Open in the Meridian Attendance app**.)
+3. Check that your name and employee number are right, then:
+   - type your **mobile number** — `082 123 4567`, `+27 82 123 4567` and
+     `0821234567` are all accepted;
+   - choose a **password**: at least 10 characters, not containing your name,
+     employee number or e-mail, and not a common password.
+4. Tap **Finish**. You are signed in straight away — there is no second login step.
+5. This phone is now registered as your attendance device. If you sign in on a new
    phone later, the old phone is signed out automatically, or your administrator
    approves the new phone first.
+
+The link only works **once** and expires after **7 days**. If it has expired, was
+already used, or never arrived (check your junk mail), ask your manager to resend the
+invitation. If you receive an invitation you were not expecting, tell your manager.
+
+If you try to sign in before setting up your account, the app tells you the account
+is not set up yet — use the link in the e-mail.
+
+Some workplaces hand out a **temporary password** instead of an invitation. In that
+case, open the app, sign in with your employee number and that password, and the app
+asks you to choose a new one immediately.
+
+### Signing in afterwards
+
+Open **Meridian Attendance** and enter your employee number (or work e-mail) and your
+password. One app serves everyone: employees sign in here, and managers and
+administrators get an extra **Manage** tab after signing in.
 
 If the app cannot reach the server, check the **Server** row at the bottom of the
 sign-in screen: it shows the backend address and has a **Test connection** button.
 Only change it if your IT team tells you to — it signs you out.
 
-Forgot your password? Tap **Forgot password**. If e-mail is set up you will receive
-a reset link that is valid for 30 minutes. Otherwise ask your administrator for a
-new temporary password.
+Forgot your password? Tap **Forgot password**. If e-mail is set up you receive
+*"Reset your Meridian Attendance password"* with a link that is valid for 30 minutes
+and works once; tapping it opens the app so you can choose a new password. Otherwise
+ask your administrator for a new temporary password.
 
 ## 3. Allow the permissions (one-time setup)
 

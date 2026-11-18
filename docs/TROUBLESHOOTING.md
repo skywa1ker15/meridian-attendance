@@ -22,7 +22,8 @@ Log guidance is in `deploy/scripts/logs.md`. Every API error response carries an
 | All clients rate-limited together (429) | `TRUST_PROXY_HEADERS` false behind Caddy, so every request appears to come from the proxy IP | Compose sets it to true; check that nobody overrode it |
 | Disk full | Backups, Docker images, logs | `df -h`; `docker system prune` (careful); lower `BACKUP_RETENTION_DAYS`; move backups off-site |
 | Backup log `dump failed verification` | Disk full or DB error during the dump | Check disk; run `backup.sh` manually; fix before the next night |
-| Password-reset e-mails not arriving | SMTP not configured or rejected | API log for SMTP errors; check `SMTP_*`; SPF/DKIM for `SMTP_FROM` domain; meanwhile admins reset passwords from the dashboard |
+| Invitation or password-reset e-mails not arriving | E-mail not configured, or the provider rejected the message | `GET /admin/email/status`, then `POST /admin/email/test`; API log for the Graph/SMTP error code; `docs/EMAIL-SETUP.md` §9; meanwhile admins resend the invitation or issue a temporary password from the dashboard |
+| Employee cannot sign in, error says the account is not set up | The invitation was never accepted | Employee profile → Resend invitation (the old link stops working) |
 | Push not delivered | `FCM_ENABLED=false`, missing service-account file, wrong project id, or stale FCM token | Check env and `deploy/secrets/`; API log for FCM errors; the app re-sends its token on open; the in-app inbox still works |
 
 ## 2. Dashboard

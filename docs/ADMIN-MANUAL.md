@@ -64,7 +64,7 @@ server too.
    administrator can change them on the server.
 4. Sessions expire after inactivity. Sign out from the user menu on shared computers.
 
-Forgotten password: use "Forgot password" if e-mail (SMTP) is configured. Otherwise
+Forgotten password: use "Forgot password" if e-mail is configured (`EMAIL-SETUP.md`). Otherwise
 ask another administrator to reset it.
 
 ## 3. Screens
@@ -80,14 +80,30 @@ recent activity. Click a tile to open the matching filtered list.
 Search by name, employee number or e-mail, and filter by department, status and
 role. Each row shows the employee's attendance status today and their active device.
 - **New employee** (admin): enter employee number, first and last name, e-mail,
-  optional phone, department and role. The **temporary password is shown once**.
-  Hand it over securely. The employee must change it at first login.
+  department and role. The phone number is optional here — the employee fills it in
+  themselves.
+  - **If e-mail is set up on the server** (see `EMAIL-SETUP.md`), the employee is
+    **invited**: they receive *"Set up your Meridian Attendance account"* with a link
+    that works once and expires after 7 days. No password is created, so nothing has
+    to be handed over and nothing can be intercepted. The screen confirms that the
+    invitation was sent and when it expires.
+  - **If e-mail is not set up** (or you switch the invitation off), the old behaviour
+    applies: a **temporary password is shown once**. Hand it over securely; the
+    employee must change it at first login.
+- **Resend invitation**: on the employee's profile, for anyone who has not activated
+  yet — the previous link stops working immediately. Use it when the mail went astray
+  or the 7 days ran out. Once the employee has a password, the button is replaced by
+  **Reset password**.
+- An employee who tries to sign in before activating is told *"Your account hasn't
+  been set up yet"*, and is asked to use the invitation link or to ask you to resend
+  it.
 
 ### 3.3 Employee profile
 Shows personal details, devices, today's summary and 30-day statistics (present,
 late and absent days, worked hours, manual requests). Actions (admin):
 - **Edit** details. Changes are audit-logged.
-- **Reset password** issues a new temporary password, shown once.
+- **Reset password** issues a new temporary password, shown once. (For an employee
+  who never activated, **Resend invitation** is the right action instead.)
 - **Deactivate** (a reason is required) blocks login and revokes all devices and
   sessions immediately. Attendance history is kept. **Reactivate** reverses it.
 - **Change role**.
@@ -225,7 +241,8 @@ personal or sensitive information.
 | Daily (morning) | Overview → Pending confirmations (yesterday) → Exceptions (missing clock-outs) → Manual requests |
 | Weekly | Weekly report; Devices: pending approvals and devices not seen for 7+ days |
 | Monthly | Monthly and working-hours reports for payroll; audit log review for configuration and role changes |
-| New employee | Employee directory → New employee → hand over the temporary password and the employee manual |
+| New employee | Employee directory → New employee → the invitation e-mail goes out automatically; send the employee manual. Without e-mail, hand over the temporary password |
+| Invitation did not arrive | Employee profile → Resend invitation. If several fail, check Settings → e-mail status and run the e-mail test (`EMAIL-SETUP.md` §8) |
 | Employee leaves | Deactivate (revokes devices). Erase only when the retention period allows (consult HR/legal) |
 | Lost phone | Devices → Revoke. The employee installs the app on a new phone and signs in. |
 | Office moves | Update the workplace coordinates and radius, then run a short pilot test (`PILOT-TEST-PLAN.md` TC-01/02) |
