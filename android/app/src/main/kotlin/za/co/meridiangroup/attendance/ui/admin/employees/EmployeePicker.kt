@@ -32,7 +32,7 @@ import za.co.meridiangroup.attendance.ui.theme.Spacing
 
 /** Search-and-pick dialog over GET /admin/employees, used by record filters and manual sessions. */
 @Composable
-fun EmployeePickerDialog(repo: AdminRepository, onDismiss: () -> Unit, onPick: (UserDto?) -> Unit, allowClear: Boolean = true) {
+fun EmployeePickerDialog(repo: AdminRepository, onDismiss: () -> Unit, allowClear: Boolean = true, onPick: (UserDto?) -> Unit) {
     var search by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<UserDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }

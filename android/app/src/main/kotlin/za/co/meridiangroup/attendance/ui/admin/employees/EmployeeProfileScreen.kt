@@ -1,5 +1,7 @@
 package za.co.meridiangroup.attendance.ui.admin.employees
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -317,7 +319,7 @@ private fun EditEmployeeDialog(
         title = { Text(stringResource(R.string.employee_edit)) },
         text = {
             Column(
-                Modifier.fillMaxWidth().then(androidx.compose.foundation.verticalScroll(androidx.compose.foundation.rememberScrollState())),
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 OutlinedTextField(number, { number = it }, label = { Text(stringResource(R.string.setup_employee_number)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
