@@ -14,6 +14,13 @@ Detection is never attendance: only an event the employee confirms (or a manager
 approves) changes an attendance session. Time is stored in UTC and displayed in
 `Africa/Johannesburg`.
 
+## Where it runs
+
+The app needs a central server for its database; it cannot be stored on GitHub.
+[`docs/HOSTING.md`](docs/HOSTING.md) compares the three options (Render free tier for a
+pilot, a South African server, or a machine at the office) and `render.yaml` makes the
+pilot a one-click Blueprint deploy.
+
 ## Status matrix
 
 Categories follow the project brief: **A** implemented and tested · **B** implemented,

@@ -91,6 +91,37 @@ class Settings(BaseSettings):
     # --- observability -------------------------------------------------------
     sentry_dsn: str | None = None
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalise_database_url(cls, value):
+        """Accept the plain URLs managed hosts hand out and bind them to psycopg 3.
+
+        Render, Heroku, Neon, Supabase and friends supply ``postgres://…`` or
+        ``postgresql://…``. Without an explicit driver SQLAlchemy reaches for psycopg2,
+        which this image does not ship, so the app would die on first connection.
+        """
+        if isinstance(value, str):
+            for prefix in ("postgres://", "postgresql://"):
+                if value.startswith(prefix):
+                    return "postgresql+psycopg://" + value[len(prefix):]
+        return value
+
+    @field_validator("public_base_url", mode="before")
+    @classmethod
+    def _normalise_public_base_url(cls, value):
+        """Accept a bare host and assume https, with no trailing slash.
+
+        Platform-generated values are often just ``my-api.onrender.com``. Treating that
+        as https is both what the platform serves and what the environment check demands,
+        so a first deploy comes up instead of failing on a missing scheme.
+        """
+        if isinstance(value, str):
+            v = value.strip().rstrip("/")
+            if v and "://" not in v:
+                v = "https://" + v
+            return v
+        return value
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value):  # noqa: D401

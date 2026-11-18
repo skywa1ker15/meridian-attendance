@@ -1,0 +1,56 @@
+# Render Blueprint — one-click test deployment of the Meridian Attendance backend.
+#
+# This exists so the system can be stood up quickly for PILOT TESTING without any
+# server administration. It is NOT the recommended home for real employee data:
+# see docs/HOSTING.md and deploy/README.md for the production options (a South
+# African server keeps the data in local jurisdiction, which is the simpler
+# position under POPIA section 72).
+#
+# To deploy: Render dashboard → New → Blueprint → pick this repository.
+# Render reads this file, provisions the database and the API, generates the
+# secrets, and gives the service an https address. Nothing here contains a secret.
+
+databases:
+  - name: meridian-db
+    databaseName: meridian_attendance
+    user: meridian
+    plan: free
+    # Free Render databases are time-limited (Render shows the expiry on the
+    # dashboard). Back up with deploy/scripts/backup.sh and move to a paid plan
+    # or Meridian's own server before the pilot ends.
+
+services:
+  - type: web
+    name: meridian-api
+    runtime: docker
+    plan: free
+    region: frankfurt # closest Render region to South Africa; ~160 ms to Durban
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /readyz
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: meridian-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true # Render generates a strong random value and keeps it
+      - key: FIRST_ADMIN_SETUP_CODE
+        generateValue: true # read it from the Render dashboard; the app asks for it once
+      - key: APP_ENV
+        value: production
+      - key: PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: meridian-api
+          property: host
+        # NOTE: this resolves to the bare host. After the first deploy, edit this
+        # variable in the dashboard to the full https:// URL so password-reset links
+        # are correct. docs/HOSTING.md step 5 covers it.
+      - key: SCHEDULER_ENABLED
+        value: "true"
+      - key: LOG_JSON
+        value: "true"
+      - key: CORS_ORIGINS
+        value: "" # the admin dashboard is served by this same service, so none needed
