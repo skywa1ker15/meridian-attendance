@@ -531,17 +531,17 @@ Nothing in the policy is an assertion of Meridian's employment rules — all val
 These are served by the API itself, need no authentication, and exist so an emailed
 link opens the **app** rather than a browser form.
 
-* `GET /app/invite?token=…` → `200 text/html`. Tries to open the app
-  (`intent://invite?token=…#Intent;scheme=meridianattendance;package=<ANDROID_PACKAGE_NAME>;end`),
-  shows **Open in the Meridian Attendance app**, and — when `APK_DOWNLOAD_URL` is set —
-  a link to install the app.
-* `GET /app/reset?token=…` → `200 text/html`. Same, with **Continue in your browser**
-  pointing at `{public_base_url}/admin/#/reset-password?token=…`.
+* `GET /app/invite?token=…` → `200 text/html`. Hands the token to the app through its
+  custom scheme (`meridian://invite?token=…`), shows **Open in the Meridian Attendance
+  app**, and — when `APK_DOWNLOAD_URL` is set — a link to install the app.
+* `GET /app/reset?token=…` → `200 text/html`. Same (`meridian://reset?token=…`), with
+  **Continue in your browser** pointing at
+  `{public_base_url}/admin/#/reset-password?token=…`.
 * A missing `token` renders a short "link incomplete" page (still `200`).
 * `GET /.well-known/assetlinks.json` → the raw contents of the `ANDROID_ASSET_LINKS_JSON`
   setting, so Android App Links can be verified; `404` while that setting is empty or not
   valid JSON.
 
-The app should register an intent filter for both the `https://<host>/app/invite` and
-`/app/reset` App Links **and** the `meridianattendance://invite` / `://reset` scheme, and
-read the `token` query parameter from either.
+The app registers intent filters for `https://<host>/app/invite` and `/app/reset` as well
+as for `meridian://invite` / `meridian://reset`, and reads the `token` query parameter from
+either (`docs/android/DEEP-LINKS.md`).

@@ -1,9 +1,11 @@
 """The two public pages the emailed links point at.
 
-Both try to hand the token straight to the Android app (an Android App Link opens
-the app directly once ``/.well-known/assetlinks.json`` is published; the
-``intent://`` fallback covers an app installed before verification). If the app is
-not there, the page offers the browser route instead.
+Both hand the token straight to the Android app through its custom scheme
+(``meridian://invite?token=…``), which always reaches the app and needs no App Link
+verification — see ``docs/android/DEEP-LINKS.md``. Once the server's host is listed in
+``/.well-known/assetlinks.json`` the emailed https link opens the app on its own and
+this page is only seen on a desktop. If the app is not installed, the page offers the
+browser route instead.
 """
 from __future__ import annotations
 
@@ -53,10 +55,14 @@ _PAGE = """<!doctype html>
 </body></html>"""
 
 
-def _app_url(settings: Settings, path: str, token: str) -> str:
+# The app's custom scheme (AndroidManifest.xml / core/AppLinks.kt).
+APP_SCHEME = "meridian"
+
+
+def _app_url(_settings: Settings, action: str, token: str) -> str:
     if not token:
         return ""
-    return f"intent://{path}?token={quote(token, safe='')}#Intent;scheme=meridianattendance;package={settings.android_package_name};end"
+    return f"{APP_SCHEME}://{action}?token={quote(token, safe='')}"
 
 
 def _render(*, title: str, intro: str, app_url: str, fallback: str, muted: str) -> str:

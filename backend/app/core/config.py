@@ -106,7 +106,6 @@ class Settings(BaseSettings):
     # Raw JSON served at /.well-known/assetlinks.json so Android can verify App Links.
     android_asset_links_json: str = ""
     apk_download_url: str | None = None
-    android_package_name: str = "za.co.meridiangroup.attendance"
 
     # --- observability -------------------------------------------------------
     sentry_dsn: str | None = None

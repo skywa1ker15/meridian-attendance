@@ -264,7 +264,7 @@ def test_invite_page(client):
     r = client.get("/app/invite", params={"token": "abc123xyz"})
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
     assert "Open in the Meridian Attendance app" in r.text
-    assert "abc123xyz" in r.text and "intent://invite?token=abc123xyz" in r.text
+    assert "abc123xyz" in r.text and "meridian://invite?token=abc123xyz" in r.text
 
 
 def test_reset_page_falls_back_to_the_dashboard(client):
