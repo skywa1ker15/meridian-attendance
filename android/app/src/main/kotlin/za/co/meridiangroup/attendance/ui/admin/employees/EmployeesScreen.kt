@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.ApiResult
+import za.co.meridiangroup.attendance.core.JohannesburgTime
+import za.co.meridiangroup.attendance.core.PhoneNumbers
 import za.co.meridiangroup.attendance.core.ServerPermissions
 import za.co.meridiangroup.attendance.core.StatusTones
 import za.co.meridiangroup.attendance.core.Validation
@@ -66,8 +68,17 @@ data class EmployeesUiState(
     val departments: List<AdminDepartmentDto> = emptyList(),
     val creating: Boolean = false,
     val createError: String? = null,
-    val createdPassword: Pair<String, String>? = null,
+    val created: CreateOutcome? = null,
 )
+
+/**
+ * What the server answered when an employee was created: HR normally invites (the employee sets their own
+ * password from the emailed link), but an administrator can still hand out a temporary password instead.
+ */
+sealed class CreateOutcome {
+    data class Invited(val name: String, val email: String, val expiresAt: String?) : CreateOutcome()
+    data class TemporaryPassword(val name: String, val password: String) : CreateOutcome()
+}
 
 class EmployeesViewModel(private val repo: AdminRepository) : ViewModel() {
     private val _state = MutableStateFlow(EmployeesUiState())
@@ -104,9 +115,15 @@ class EmployeesViewModel(private val repo: AdminRepository) : ViewModel() {
         viewModelScope.launch {
             when (val r = repo.createEmployee(body)) {
                 is ApiResult.Success -> {
-                    _state.update {
-                        it.copy(creating = false, createdPassword = r.value.user.fullName to (r.value.temporaryPassword ?: ""))
-                    }
+                    val value = r.value
+                    val outcome = value.temporaryPassword?.takeIf { p -> p.isNotBlank() }
+                        ?.let { p -> CreateOutcome.TemporaryPassword(value.user.fullName, p) }
+                        ?: CreateOutcome.Invited(
+                            value.user.fullName,
+                            value.invitation?.email?.ifBlank { null } ?: value.user.email,
+                            value.invitation?.expiresAt,
+                        )
+                    _state.update { it.copy(creating = false, created = outcome) }
                     onCreated()
                     reload()
                 }
@@ -115,7 +132,7 @@ class EmployeesViewModel(private val repo: AdminRepository) : ViewModel() {
         }
     }
 
-    fun clearSecret() = _state.update { it.copy(createdPassword = null) }
+    fun clearSecret() = _state.update { it.copy(created = null) }
     fun clearMessage() = _state.update { it.copy(paged = it.paged.copy(message = null), createError = null) }
 }
 
@@ -191,13 +208,27 @@ fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, on
             onCreate = { body -> viewModel.create(body) { showCreate = false } },
         )
     }
-    state.createdPassword?.let { (name, password) ->
-        SecretDialog(
+    when (val outcome = state.created) {
+        is CreateOutcome.TemporaryPassword -> SecretDialog(
             stringResource(R.string.employees_created_title),
-            stringResource(R.string.employees_created_body, name),
-            password,
+            stringResource(R.string.employees_created_body, outcome.name),
+            outcome.password,
             viewModel::clearSecret,
         )
+        is CreateOutcome.Invited -> AlertDialog(
+            onDismissRequest = viewModel::clearSecret,
+            title = { Text(stringResource(R.string.employees_invited_title)) },
+            text = {
+                val expires = outcome.expiresAt?.let(JohannesburgTime::dateTime)
+                Text(
+                    if (expires == null) stringResource(R.string.employees_invited_body_no_expiry, outcome.name, outcome.email)
+                    else stringResource(R.string.employees_invited_body, outcome.name, outcome.email, expires),
+                    modifier = Modifier.testTag("employee_invited_body"),
+                )
+            },
+            confirmButton = { TextButton(onClick = viewModel::clearSecret) { Text(stringResource(R.string.action_done)) } },
+        )
+        null -> Unit
     }
 }
 
@@ -231,7 +262,11 @@ private fun CreateEmployeeDialog(
                 OutlinedTextField(first, { first = it }, label = { Text(stringResource(R.string.setup_first_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("new_first"))
                 OutlinedTextField(last, { last = it }, label = { Text(stringResource(R.string.setup_last_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("new_last"))
                 OutlinedTextField(email, { email = it }, label = { Text(stringResource(R.string.profile_email)) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("new_email"))
-                OutlinedTextField(phone, { phone = it }, label = { Text(stringResource(R.string.profile_phone)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    phone, { phone = it }, label = { Text(stringResource(R.string.profile_phone)) }, singleLine = true,
+                    supportingText = { Text(stringResource(R.string.employees_phone_optional)) },
+                    modifier = Modifier.fillMaxWidth().testTag("new_phone"),
+                )
                 AdminDropdown(
                     stringResource(R.string.profile_department),
                     listOf("" to stringResource(R.string.employees_no_department)) + departments.map { it.id to it.name },
@@ -239,7 +274,7 @@ private fun CreateEmployeeDialog(
                 )
                 AdminDropdown(stringResource(R.string.profile_role), roles.map { it to StatusTones.label(it) }, role, { role = it }, tag = "new_role")
                 (localError ?: error)?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                Text(stringResource(R.string.employees_temp_password_note), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.employees_invite_note), style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
@@ -249,6 +284,7 @@ private fun CreateEmployeeDialog(
                         Validation.identifier(number) != null -> Validation.identifier(number)
                         first.isBlank() || last.isBlank() -> "Enter the first and last name."
                         !email.contains('@') -> "Enter a valid email address."
+                        PhoneNumbers.error(phone, required = false) != null -> PhoneNumbers.HELP
                         else -> null
                     }
                     if (issue != null) { localError = issue; return@TextButton }
@@ -256,7 +292,7 @@ private fun CreateEmployeeDialog(
                     onCreate(
                         EmployeeCreateRequestDto(
                             employeeNumber = number.trim(), firstName = first.trim(), lastName = last.trim(), email = email.trim(),
-                            phone = phone.trim().ifBlank { null }, departmentId = departmentId.ifBlank { null }, role = role,
+                            phone = PhoneNumbers.normalise(phone), departmentId = departmentId.ifBlank { null }, role = role,
                         ),
                     )
                 },

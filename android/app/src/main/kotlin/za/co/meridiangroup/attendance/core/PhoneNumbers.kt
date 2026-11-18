@@ -17,42 +17,42 @@ object PhoneNumbers {
     private val separators = Regex("[\\s\\-()./ ‐-―]")
     private val nsnRegex = Regex("^[1-8]\\d{8}$")
 
-    sealed class Result {
+    sealed class Parsed {
         /** Nothing was typed. The field is optional in most places; the activation screen requires it. */
-        object Empty : Result()
-        data class Valid(val e164: String) : Result()
-        object Invalid : Result()
+        object Empty : Parsed()
+        data class Valid(val e164: String) : Parsed()
+        object Invalid : Parsed()
     }
 
-    fun parse(value: String?): Result {
-        if (value == null) return Result.Empty
+    fun parse(value: String?): Parsed {
+        if (value == null) return Parsed.Empty
         val cleaned = separators.replace(value, "").trim()
-        if (cleaned.isEmpty()) return Result.Empty
+        if (cleaned.isEmpty()) return Parsed.Empty
         val nsn: String = when {
             cleaned.startsWith("+") -> {
                 val digits = cleaned.substring(1)
-                if (!digits.isDigits() || !digits.startsWith("27")) return Result.Invalid
+                if (!digits.isDigits() || !digits.startsWith("27")) return Parsed.Invalid
                 digits.substring(2)
             }
             cleaned.isDigits() -> when {
                 cleaned.startsWith("0027") -> cleaned.substring(4)
                 cleaned.startsWith("27") && cleaned.length == 11 -> cleaned.substring(2)
                 cleaned.startsWith("0") -> cleaned.substring(1)
-                else -> return Result.Invalid
+                else -> return Parsed.Invalid
             }
-            else -> return Result.Invalid
+            else -> return Parsed.Invalid
         }
-        return if (nsnRegex.matches(nsn)) Result.Valid("+27$nsn") else Result.Invalid
+        return if (nsnRegex.matches(nsn)) Parsed.Valid("+27$nsn") else Parsed.Invalid
     }
 
     /** `+27821234567` for anything valid, otherwise null (including empty input). */
-    fun normalise(value: String?): String? = (parse(value) as? Result.Valid)?.e164
+    fun normalise(value: String?): String? = (parse(value) as? Parsed.Valid)?.e164
 
     /** Null when acceptable, otherwise the inline error message. [required] rejects an empty field. */
     fun error(value: String?, required: Boolean): String? = when (parse(value)) {
-        is Result.Valid -> null
-        Result.Empty -> if (required) "Enter your phone number." else null
-        Result.Invalid -> HELP
+        is Parsed.Valid -> null
+        Parsed.Empty -> if (required) "Enter your phone number." else null
+        Parsed.Invalid -> HELP
     }
 
     /** Local display form of an E.164 number: `+27821234567` → `082 123 4567`. */

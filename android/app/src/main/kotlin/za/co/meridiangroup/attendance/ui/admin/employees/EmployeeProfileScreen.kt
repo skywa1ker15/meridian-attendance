@@ -113,6 +113,20 @@ class EmployeeProfileViewModel(private val graph: AppGraph, private val employee
     fun approveDevice(id: String) = act({ repo.approveDevice(id) }, "Device approved.")
     fun revokeDevice(id: String, reason: String) = act({ repo.revokeDevice(id, reason) }, "Device revoked.")
 
+    /** Emails a fresh invitation link; the employee sets their own password from it. */
+    fun resendInvitation() {
+        _state.update { it.copy(busy = true, message = null) }
+        viewModelScope.launch {
+            when (val r = repo.resendInvitation(employeeId)) {
+                is ApiResult.Success -> _state.update {
+                    val email = r.value.email?.ifBlank { null } ?: it.detail?.user?.email.orEmpty()
+                    it.copy(busy = false, message = "Invitation emailed to $email.")
+                }
+                else -> _state.update { it.copy(busy = false, message = r.userMessage()) }
+            }
+        }
+    }
+
     fun resetPassword() {
         _state.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
@@ -213,6 +227,12 @@ fun EmployeeProfileScreen(viewModel: EmployeeProfileViewModel, permissions: List
                         GlassCard {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                                 if (canWrite) PillButton(stringResource(R.string.employee_edit), { editing = true }, style = PillStyle.OUTLINE, enabled = !state.busy)
+                                if (canWrite) {
+                                    PillButton(
+                                        stringResource(R.string.employee_resend_invitation), viewModel::resendInvitation,
+                                        Modifier.testTag("employee_resend_invite"), style = PillStyle.OUTLINE, enabled = !state.busy,
+                                    )
+                                }
                                 if (canWrite) PillButton(stringResource(R.string.employee_reset_password), viewModel::resetPassword, style = PillStyle.OUTLINE, enabled = !state.busy)
                                 if (canWrite) {
                                     if (user.status == "active") {
