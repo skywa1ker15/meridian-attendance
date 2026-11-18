@@ -78,6 +78,8 @@ data class EmployeeCreateRequestDto(
     @SerialName("department_id") val departmentId: String? = null,
     @SerialName("role") val role: String = "employee",
     @SerialName("temporary_password") val temporaryPassword: String? = null,
+    /** null lets the server decide (it invites whenever email is configured). */
+    @SerialName("send_invitation") val sendInvitation: Boolean? = null,
 )
 
 /**

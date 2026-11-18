@@ -35,12 +35,15 @@ def invalidate_outstanding(db: Session, user: User) -> None:
     )
 
 
-def issue(db: Session, user: User, actor: User | None, request: Request | None, *, audit_action: str = "employee.invited") -> tuple[bool, datetime]:
+def issue(db: Session, user: User, actor: User | None, request: Request | None, *, audit_action: str = "employee.invited") -> tuple[bool, datetime, str | None]:
     """Create (and email) a fresh invitation, invalidating any earlier unused one.
 
-    Returns ``(sent, expires_at)``. ``sent`` is False when no email provider is
-    configured or the provider refused the message — the administrator can then
-    resend once email works.
+    Returns ``(sent, expires_at, link)``. ``sent`` is False when no email provider is
+    configured or the provider refused the message; in that case ``link`` carries the
+    invitation URL so the administrator who made the request can pass it on another way
+    (read out in person, company chat). Without it an invited employee would be stranded:
+    they have no password and no email. When the message was sent, ``link`` is None —
+    the employee has it, and it does not belong in an API response or a log.
     """
     settings = get_settings()
     invalidate_outstanding(db, user)
@@ -60,7 +63,7 @@ def issue(db: Session, user: User, actor: User | None, request: Request | None, 
     link = settings.invitation_url_template.format(public_base_url=settings.public_base_url.rstrip("/"), token=raw)
     subject, text_body, html_body = email_service.invitation_message(first_name=user.first_name, link=link, expiry_days=settings.invitation_expiry_days)
     sent = email_service.send_email(to=user.email, subject=subject, text_body=text_body, html_body=html_body)
-    return sent, expires_at
+    return sent, expires_at, (None if sent else link)
 
 
 def _load(db: Session, raw_token: str) -> tuple[InvitationToken, User]:

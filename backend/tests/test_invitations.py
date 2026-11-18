@@ -257,3 +257,38 @@ def test_invite_reports_not_sent_when_email_is_unavailable(client, admin_tokens,
     r = client.post(f"/api/v1/admin/employees/{user.id}/invite", headers=auth(admin_tokens))
     assert r.status_code == 200 and r.json()["sent"] is False
     assert db.execute(select(InvitationToken).where(InvitationToken.user_id == user.id)).scalar_one() is not None
+
+
+# --- an invitation that could not be emailed must still be deliverable -------------------
+# Regression: with no email provider configured the employee had no password, no email and
+# no link anywhere, so the account was unusable and unrecoverable.
+def test_link_returned_to_admin_when_email_cannot_be_sent(client, admin_tokens, db):
+    body = {"employee_number": "INV-NOMAIL", "first_name": "Thabo", "last_name": "Mkhize",
+            "email": "thabo.mkhize@example.co.za", "send_invitation": True}
+    r = client.post("/api/v1/admin/employees", json=body, headers=auth(admin_tokens))
+    assert r.status_code == 201, r.text
+    inv = r.json()["invitation"]
+    assert inv["sent"] is False
+    assert inv["link"] and "token=" in inv["link"], "admin must be able to pass the invitation on by hand"
+    # the link works end to end
+    token = inv["link"].split("token=")[1]
+    assert client.get(f"/api/v1/auth/invitation?token={token}").status_code == 200
+    accepted = client.post("/api/v1/auth/invitation/accept",
+                           json={"token": token, "phone": "082 123 4567", "password": "Tidal-Lamp-Orbit-94"})
+    assert accepted.status_code == 201, accepted.text
+
+
+def test_resend_also_returns_the_link_when_email_is_down(client, admin_tokens, db):
+    body = {"employee_number": "INV-RESEND", "first_name": "Ayanda", "last_name": "Zulu",
+            "email": "ayanda.zulu@example.co.za", "send_invitation": True}
+    uid = client.post("/api/v1/admin/employees", json=body, headers=auth(admin_tokens)).json()["user"]["id"]
+    r = client.post(f"/api/v1/admin/employees/{uid}/invite", headers=auth(admin_tokens))
+    assert r.status_code == 200 and r.json()["link"] and "token=" in r.json()["link"]
+
+
+def test_link_is_withheld_once_the_email_was_actually_sent(client, admin_tokens, db, mail):
+    """The employee has it; it should not sit in an API response or a log."""
+    body = {"employee_number": "INV-SENT", "first_name": "Sipho", "last_name": "Ndlovu",
+            "email": "sipho.ndlovu@example.co.za", "send_invitation": True}
+    inv = client.post("/api/v1/admin/employees", json=body, headers=auth(admin_tokens)).json()["invitation"]
+    assert inv["sent"] is True and inv["link"] is None

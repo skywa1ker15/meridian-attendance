@@ -88,7 +88,8 @@ data class ActivationUiState(
     val checklist: List<PasswordPolicy.Check>
         get() = PasswordPolicy.check(
             password,
-            listOfNotNull(invitation?.employeeNumber, invitation?.email),
+            // The server checks all four (backend/app/services/invitations.py#accept).
+            listOfNotNull(invitation?.employeeNumber, invitation?.email, invitation?.firstName, invitation?.lastName),
             confirm,
         )
 }
@@ -153,7 +154,8 @@ class ActivationViewModel(private val graph: AppGraph, private val token: String
                             f.httpStatus == 422 -> it.copy(
                                 submitting = false,
                                 phoneError = f.fieldErrors["phone"]?.let { _ -> PhoneNumbers.HELP },
-                                passwordError = f.fieldErrors["password"]?.let(PasswordPolicy::messageForCode),
+                                passwordError = (f.fieldErrors["password"] ?: f.fieldErrors["new_password"])
+                                    ?.let(PasswordPolicy::messageForCode),
                                 formError = if (f.fieldErrors.isEmpty()) r.userMessage() else null,
                             )
                             else -> it.copy(submitting = false, formError = r.userMessage())

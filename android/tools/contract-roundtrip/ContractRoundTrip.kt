@@ -155,7 +155,9 @@ fun main(args: Array<String>) {
         val created = step("create employee", "POST", "/admin/employees",
             enc(EmployeeCreateRequestDto("RT-$suffix", "Roundtrip", "Tester", "roundtrip.$suffix@example.co.za", role = "employee")),
             EmployeeCreatedDto.serializer(), expect = setOf(201))
-        if (created != null && created.temporaryPassword.isNullOrBlank()) failures += "create employee returned no temporary_password"
+        if (created != null && created.temporaryPassword.isNullOrBlank() && created.invitation == null) {
+            failures += "create employee returned neither temporary_password nor invitation"
+        }
         created?.user?.id?.let { newId ->
             step("edit employee", "PATCH", "/admin/employees/$newId", enc(EmployeeUpdateRequestDto(phone = "+27 31 000 0000")), UserDto.serializer())
             step("change role", "POST", "/admin/employees/$newId/role", enc(RoleRequestDto("manager")), UserDto.serializer())
@@ -163,6 +165,8 @@ fun main(args: Array<String>) {
             step("deactivate", "POST", "/admin/employees/$newId/deactivate", enc(ReasonRequestDto("contract round-trip test")), UserDto.serializer())
             step("reactivate", "POST", "/admin/employees/$newId/reactivate", null, UserDto.serializer())
         }
+
+        invitationFlow(suffix)
 
         // Workplaces and policy: the app sends a full body on create and only changed keys on edit.
         val workplaces = step("admin workplaces", "GET", "/admin/workplaces", null, ItemsDto.serializer(WorkplaceDto.serializer()))
@@ -182,6 +186,108 @@ fun main(args: Array<String>) {
     }
 
     finish()
+}
+
+
+/**
+ * Invitation flow as the app performs it: HR creates an invited employee, that employee cannot sign in
+ * yet (401 invitation_pending), the emailed link is read (GET /auth/invitation), accepted
+ * (POST /auth/invitation/accept, same body as login) and the new password then works on /auth/login.
+ *
+ * The raw token only ever exists inside the invitation email, so for the accept/login half this needs
+ * RT_DB (a psql connection string for the SAME development database) to plant a token the way the
+ * server would. Without it the token-less half still runs.
+ */
+private fun invitationFlow(suffix: String) {
+    val adminToken = token
+    println("Invitation flow (invite -> accept -> login):")
+    val email = "roundtrip.invite.$suffix@example.co.za"
+    val number = "RTI-$suffix"
+    val created = step(
+        "create invited employee", "POST", "/admin/employees",
+        enc(EmployeeCreateRequestDto(number, "Roundtrip", "Invitee", email, role = "employee", sendInvitation = true)),
+        EmployeeCreatedDto.serializer(), expect = setOf(201),
+    ) ?: return
+    if (created.invitation == null) failures += "create with send_invitation=true returned no invitation object"
+    if (!created.temporaryPassword.isNullOrBlank()) failures += "an invited employee must not get a temporary password"
+    if (created.invitation?.expiresAt.isNullOrBlank()) failures += "invitation has no expires_at"
+
+    // The app's login screen maps this code onto "finish setting up your account".
+    token = null
+    val (pendingCode, pendingBody) = call("POST", "/auth/login", enc(LoginRequestDto(number, "Whatever-Pass-2026", null)))
+    val pendingError = runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), pendingBody).error.code }.getOrNull()
+    if (pendingCode == 401 && pendingError == "invitation_pending") {
+        passed++; println("  ok   login before activation -> 401 invitation_pending")
+    } else {
+        failures += "login before activation: $pendingCode $pendingError"
+    }
+
+    // A bad link must answer 400 token_invalid (the app shows "ask your manager for a new one").
+    val (badCode, badBody) = call("GET", "/auth/invitation?token=not-a-real-token", null)
+    val badError = runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), badBody).error.code }.getOrNull()
+    if (badCode == 400 && badError == "token_invalid") { passed++; println("  ok   invalid invitation link -> 400 token_invalid") }
+    else failures += "invalid invitation link: $badCode $badError"
+
+    val raw = plantInvitation(created.user.id)
+    if (raw == null) {
+        println("  skip accept/login: set RT_DB=<psql connection string> to exercise the whole invitation flow")
+    } else {
+        val details = step("read invitation", "GET", "/auth/invitation?token=$raw", null, InvitationDto.serializer())
+        if (details != null && details.email != email) failures += "invitation is for ${details.email}, expected $email"
+        if (details != null && details.phone != null) failures += "an invited employee should not have a phone yet"
+        // Must not contain the employee number, email, first or last name: the server checks all four.
+        val password = "Umgeni-Ridge-$suffix"
+        val accepted = step(
+            "accept invitation", "POST", "/auth/invitation/accept",
+            enc(AcceptInvitationRequestDto(raw, "082 123 4567", password, DeviceInfoDto(java.util.UUID.randomUUID().toString(), "Pixel 8", "Google", "15", "1.0.0 (1)"))),
+            AuthResponseDto.serializer(), expect = setOf(201),
+        )
+        if (accepted != null && accepted.user.phone != "+27821234567") failures += "phone stored as ${accepted?.user?.phone}, expected +27821234567"
+        if (accepted != null && accepted.mustChangePassword) failures += "an activated employee must not be asked to change their password"
+        val (reuseCode, reuseBody) = call("POST", "/auth/invitation/accept", enc(AcceptInvitationRequestDto(raw, "0821234567", "Another-Pass-2026", null)))
+        val reuseError = runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), reuseBody).error.code }.getOrNull()
+        if (reuseCode == 400 && reuseError == "token_invalid") { passed++; println("  ok   an accepted invitation cannot be reused") }
+        else failures += "invitation reuse: $reuseCode $reuseError"
+        step("login with the chosen password", "POST", "/auth/login", enc(LoginRequestDto(number, password, null)), AuthResponseDto.serializer())
+    }
+
+    // Password reset: a bad reset token is rejected, and forgot-password always answers 202.
+    val (resetCode, resetBody) = call("POST", "/auth/password/reset", enc(ResetPasswordRequestDto("not-a-real-token", "Umgeni-Ridge-Reset-2026")))
+    val resetError = runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), resetBody).error.code }.getOrNull()
+    when {
+        resetCode == 400 && resetError == "token_invalid" -> { passed++; println("  ok   invalid reset link -> 400 token_invalid") }
+        // The reset endpoints share a tight rate limit; being throttled is not a contract failure.
+        resetCode == 429 -> println("  skip invalid reset link: rate limited by the server")
+        else -> failures += "invalid reset link: $resetCode $resetError"
+    }
+    noContent("forgot password", "POST", "/auth/password/forgot", enc(ForgotPasswordRequestDto(email)))
+
+    // Resend invitation (the "Resend invitation" action on an employee's profile).
+    token = adminToken
+    val second = step(
+        "create a second invited employee", "POST", "/admin/employees",
+        enc(EmployeeCreateRequestDto("RTI2-$suffix", "Roundtrip", "Resend", "roundtrip.resend.$suffix@example.co.za", role = "employee", sendInvitation = true)),
+        EmployeeCreatedDto.serializer(), expect = setOf(201),
+    )
+    second?.user?.id?.let { id ->
+        step("resend invitation", "POST", "/admin/employees/$id/invite", null, InvitationSummaryDto.serializer())
+    }
+}
+
+/**
+ * Plants an invitation token for [userId] directly in the development database, exactly as
+ * app/services/invitations.py does (SHA-256 of the raw token). Returns null when RT_DB is unset.
+ */
+private fun plantInvitation(userId: String): String? {
+    val db = System.getenv("RT_DB")?.takeIf { it.isNotBlank() } ?: return null
+    val raw = "rt-" + java.util.UUID.randomUUID().toString().replace("-", "")
+    val hash = java.security.MessageDigest.getInstance("SHA-256").digest(raw.toByteArray())
+        .joinToString("") { "%02x".format(it) }
+    val sql = "insert into invitation_tokens (id, user_id, token_hash, expires_at) values " +
+        "('${java.util.UUID.randomUUID()}', '$userId', '$hash', now() + interval '7 days')"
+    val process = ProcessBuilder("psql", db, "-v", "ON_ERROR_STOP=1", "-c", sql).redirectErrorStream(true).start()
+    val output = process.inputStream.bufferedReader().readText().trim()
+    return if (process.waitFor() == 0) raw else { failures += "could not plant an invitation token: $output"; null }
 }
 
 private fun finish() {

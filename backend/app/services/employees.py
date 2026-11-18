@@ -169,8 +169,8 @@ def create_employee(db: Session, actor: User, data: EmployeeCreateIn, request: R
 
     invitation: dict[str, Any] | None = None
     if invite:
-        sent, expires_at = invitations.issue(db, user, actor, request)
-        invitation = {"sent": sent, "expires_at": timeutil.utc_iso(expires_at)}
+        sent, expires_at, link = invitations.issue(db, user, actor, request)
+        invitation = {"sent": sent, "expires_at": timeutil.utc_iso(expires_at), "link": link}
         db.refresh(user)
     return user, temp, invitation
 
@@ -186,8 +186,8 @@ def invite_employee(db: Session, actor: User, ref: str, request: Request | None)
         # The account is already usable; a reset link is the right tool there and it
         # keeps the existing password working until the employee uses it.
         raise ApiError(409, "invalid_state", "This employee already has a password. Use reset password instead.")
-    sent, expires_at = invitations.issue(db, user, actor, request, audit_action="employee.invite_resent")
-    return {"sent": sent, "expires_at": timeutil.utc_iso(expires_at)}
+    sent, expires_at, link = invitations.issue(db, user, actor, request, audit_action="employee.invite_resent")
+    return {"sent": sent, "expires_at": timeutil.utc_iso(expires_at), "link": link}
 
 
 def update_employee(db: Session, actor: User, ref: str, data: EmployeeUpdateIn, request: Request | None) -> User:
