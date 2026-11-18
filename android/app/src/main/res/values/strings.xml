@@ -499,4 +499,118 @@
     <string name="reports_empty_body">Choose a report and tap Preview.</string>
     <string name="reports_no_rows_title">No data</string>
     <string name="reports_no_rows_body">This report has no rows for the chosen filters.</string>
+    <!-- Workplaces -->
+    <string name="workplace_new">New workplace</string>
+    <string name="workplace_edit">Edit workplace</string>
+    <string name="workplace_empty_title">No workplaces yet</string>
+    <string name="workplace_empty_body">Add your office so the app can detect arrivals and departures.</string>
+    <string name="workplace_name">Name</string>
+    <string name="workplace_address">Address</string>
+    <string name="workplace_location">Location</string>
+    <string name="workplace_latitude">Latitude</string>
+    <string name="workplace_longitude">Longitude</string>
+    <string name="workplace_coordinates">Coordinates</string>
+    <string name="workplace_radius">Radius (m)</string>
+    <string name="workplace_accuracy_threshold">Accuracy threshold (m)</string>
+    <string name="workplace_use_location">Use my current location</string>
+    <string name="workplace_use_wifi">Use current Wi-Fi</string>
+    <string name="workplace_accuracy">Fix accuracy: %1$s</string>
+    <string name="workplace_accuracy_good">Good enough to use as the geofence centre.</string>
+    <string name="workplace_accuracy_poor">That is coarse for a geofence centre. Stand outside near the entrance and try again, or increase the radius.</string>
+    <string name="workplace_coordinates_confirmed">Coordinates confirmed</string>
+    <string name="workplace_coordinates_confirmed_body">Only switch this on once the coordinates are the real workplace. Detection stays off until then.</string>
+    <string name="workplace_confirmed">Confirmed</string>
+    <string name="workplace_unconfirmed">Not confirmed</string>
+    <string name="workplace_unconfirmed_title">Coordinates not confirmed</string>
+    <string name="workplace_unconfirmed_body">Phones will not register a geofence and confirmed events go to review until the real coordinates are set and confirmed.</string>
+    <string name="workplace_detection">Detection</string>
+    <string name="workplace_entry">Detect arrivals</string>
+    <string name="workplace_exit">Detect departures</string>
+    <string name="workplace_dwell">Dwell (seconds)</string>
+    <string name="workplace_exit_debounce">Exit debounce (seconds)</string>
+    <string name="workplace_wifi">Wi-Fi verification</string>
+    <string name="workplace_wifi_enabled">Verify with Wi-Fi</string>
+    <string name="workplace_ssid">Wi-Fi name (SSID)</string>
+    <string name="workplace_bssids">Access point BSSIDs</string>
+    <string name="workplace_bssids_hint">Comma separated, e.g. a4:2b:b0:11:22:33</string>
+    <string name="workplace_wifi_required">Require a Wi-Fi match</string>
+    <string name="workplace_wifi_required_body">Without a match, attendance goes to review.</string>
+    <string name="workplace_active">Active</string>
+
+    <!-- Policy -->
+    <string name="policy_review_title">Defaults, not Meridian policy</string>
+    <string name="policy_review_body">These values need management review before the pilot. Changing them affects everyone immediately.</string>
+    <string name="policy_hours">Working hours</string>
+    <string name="policy_workday_start">Workday start (HH:MM)</string>
+    <string name="policy_workday_end">Workday end (HH:MM)</string>
+    <string name="policy_late_after">Late after (HH:MM)</string>
+    <string name="policy_grace">Grace minutes</string>
+    <string name="policy_standard_day">Standard day (minutes)</string>
+    <string name="policy_break">Break (minutes)</string>
+    <string name="policy_overtime_after">Overtime after (minutes)</string>
+    <string name="policy_working_days">Working days (1=Mon … 7=Sun)</string>
+    <string name="policy_confirmations">Confirmations and timing</string>
+    <string name="policy_pending_expiry">Pending expiry (hours)</string>
+    <string name="policy_missing_flag">Flag missing clock-out at (HH:MM)</string>
+    <string name="policy_future_skew">Max future skew (seconds)</string>
+    <string name="policy_offline_age">Max offline age (hours)</string>
+    <string name="policy_online_skew">Online skew tolerance (seconds)</string>
+    <string name="policy_duplicate_window">Duplicate window (seconds)</string>
+    <string name="policy_time_source">Official time source</string>
+    <string name="policy_time_server">Server received</string>
+    <string name="policy_time_device">Device detected</string>
+    <string name="policy_min_score">Minimum score for auto-confirm (0–1)</string>
+    <string name="policy_devices">Devices</string>
+    <string name="policy_max_devices">Max active devices per employee</string>
+    <string name="policy_replacement_approval">New device needs approval</string>
+    <string name="policy_require_integrity">Require a Play Integrity verdict</string>
+    <string name="policy_retention">Retention (POPIA)</string>
+    <string name="policy_retention_attendance">Attendance records (days)</string>
+    <string name="policy_retention_location">Location data (days)</string>
+    <string name="policy_retention_audit">Audit log (days)</string>
+    <string name="policy_updated">Last updated: %1$s</string>
+
+    <!-- Departments -->
+    <string name="departments_new">New department</string>
+    <string name="departments_edit">Edit department</string>
+    <string name="departments_name">Name</string>
+    <string name="departments_code">Code</string>
+    <string name="departments_employees">%1$d employees</string>
+    <string name="departments_activate">Activate</string>
+    <string name="departments_deactivate">Deactivate</string>
+    <string name="departments_empty_title">No departments</string>
+    <string name="departments_empty_body">Create one so employees can be grouped and filtered.</string>
+
+    <!-- Devices -->
+    <string name="devices_search">Search employee or device</string>
+    <string name="devices_app_version">App version</string>
+    <string name="devices_integrity">Integrity</string>
+    <string name="devices_revoke_body">The phone can no longer record attendance and is signed out.</string>
+    <string name="devices_empty_title">No devices</string>
+    <string name="devices_empty_body">Nothing matches these filters.</string>
+
+    <!-- Roles -->
+    <string name="roles_change">Change someone\'s role</string>
+    <string name="roles_change_body">The server decides which roles you may assign. Role changes are audit-logged.</string>
+    <string name="roles_user_count">%1$d active</string>
+    <string name="roles_note">Permissions are enforced by the server; the app only hides what you may not use.</string>
+
+    <!-- Audit log -->
+    <string name="audit_search">Search actor, action or record</string>
+    <string name="audit_action">Action starts with…</string>
+    <string name="audit_when">When</string>
+    <string name="audit_actor">Actor</string>
+    <string name="audit_entity">Record</string>
+    <string name="audit_ip">IP address</string>
+    <string name="audit_before">Before</string>
+    <string name="audit_after">After</string>
+    <string name="audit_empty_title">No audit entries</string>
+    <string name="audit_empty_body">Nothing matches these filters.</string>
+
+    <!-- Broadcast -->
+    <string name="broadcast_title_label">Title</string>
+    <string name="broadcast_body_label">Message</string>
+    <string name="broadcast_everyone">Everyone</string>
+    <string name="broadcast_send">Send notification</string>
+    <string name="broadcast_note">Employees receive this in the app inbox, and as a push notification when they have one enabled.</string>
 </resources>

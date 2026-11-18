@@ -71,6 +71,20 @@ import za.co.meridiangroup.attendance.ui.admin.records.RecordsScreen
 import za.co.meridiangroup.attendance.ui.admin.records.RecordsViewModel
 import za.co.meridiangroup.attendance.ui.admin.reports.ReportsScreen
 import za.co.meridiangroup.attendance.ui.admin.reports.ReportsViewModel
+import za.co.meridiangroup.attendance.ui.admin.audit.AuditScreen
+import za.co.meridiangroup.attendance.ui.admin.audit.AuditViewModel
+import za.co.meridiangroup.attendance.ui.admin.broadcast.BroadcastScreen
+import za.co.meridiangroup.attendance.ui.admin.broadcast.BroadcastViewModel
+import za.co.meridiangroup.attendance.ui.admin.devices.DevicesScreen
+import za.co.meridiangroup.attendance.ui.admin.devices.DevicesViewModel
+import za.co.meridiangroup.attendance.ui.admin.policy.DepartmentsScreen
+import za.co.meridiangroup.attendance.ui.admin.policy.DepartmentsViewModel
+import za.co.meridiangroup.attendance.ui.admin.policy.PolicyScreen
+import za.co.meridiangroup.attendance.ui.admin.policy.PolicyViewModel
+import za.co.meridiangroup.attendance.ui.admin.roles.RolesScreen
+import za.co.meridiangroup.attendance.ui.admin.roles.RolesViewModel
+import za.co.meridiangroup.attendance.ui.admin.workplaces.WorkplacesScreen
+import za.co.meridiangroup.attendance.ui.admin.workplaces.WorkplacesViewModel
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordScreen
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordViewModel
 import za.co.meridiangroup.attendance.ui.auth.LoginScreen
@@ -409,6 +423,41 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
             composable(Routes.MANAGE_REPORTS) {
                 Gated(ServerPermissions.canExport(permissions)) {
                     ReportsScreen(graphViewModel(key = "reports") { ReportsViewModel(it, it.now) })
+                }
+            }
+            composable(Routes.MANAGE_WORKPLACES) {
+                Gated(ServerPermissions.canWriteConfig(permissions)) {
+                    WorkplacesScreen(graphViewModel(key = "workplaces") { WorkplacesViewModel(it) })
+                }
+            }
+            composable(Routes.MANAGE_POLICY) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    PolicyScreen(graphViewModel(key = "policy") { PolicyViewModel(it.adminRepository) })
+                }
+            }
+            composable(Routes.MANAGE_DEPARTMENTS) {
+                Gated(ServerPermissions.canWriteConfig(permissions)) {
+                    DepartmentsScreen(graphViewModel(key = "departments") { DepartmentsViewModel(it.adminRepository) })
+                }
+            }
+            composable(Routes.MANAGE_DEVICES) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    DevicesScreen(graphViewModel(key = "devices") { DevicesViewModel(it.adminRepository) }, permissions)
+                }
+            }
+            composable(Routes.MANAGE_ROLES) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    RolesScreen(graphViewModel(key = "roles") { RolesViewModel(it.adminRepository) }, permissions)
+                }
+            }
+            composable(Routes.MANAGE_AUDIT) {
+                Gated(ServerPermissions.canRead(permissions)) {
+                    AuditScreen(graphViewModel(key = "audit") { AuditViewModel(it.adminRepository, it.now) })
+                }
+            }
+            composable(Routes.MANAGE_BROADCAST) {
+                Gated(ServerPermissions.canBroadcast(permissions)) {
+                    BroadcastScreen(graphViewModel(key = "broadcast") { BroadcastViewModel(it.adminRepository) })
                 }
             }
         }
