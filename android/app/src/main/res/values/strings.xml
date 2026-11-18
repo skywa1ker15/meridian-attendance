@@ -31,9 +31,9 @@
     <string name="nav_admin">Manager tools</string>
 
     <!-- Login -->
-    <string name="login_subtitle">Sign in with the details supplied by HR.</string>
+    <string name="login_subtitle">Sign in with your Meridian employee number or email — staff and administrators.</string>
     <string name="login_identifier">Employee number or email</string>
-    <string name="login_identifier_hint">For example MG-0042</string>
+    <string name="login_identifier_hint">For example MG-0042 or name@meridiangroup.co.za</string>
     <string name="login_password">Password</string>
     <string name="login_show_password">Show password</string>
     <string name="login_hide_password">Hide password</string>
@@ -318,4 +318,32 @@
     <string name="admin_note">Note</string>
     <string name="admin_note_hint">Required. Recorded in the audit log.</string>
     <string name="admin_pending">Pending</string>
+    <!-- Server address setting (login screen + Profile) -->
+    <string name="server_row">Server: %1$s</string>
+    <string name="server_title">Server address</string>
+    <string name="server_body">The address of your Meridian Attendance backend. Only your IT team should change this.</string>
+    <string name="server_body_debug">The address of your Meridian Attendance backend. This build also accepts http:// addresses on your own network (for example http://192.168.1.50:8000).</string>
+    <string name="server_address">Backend address</string>
+    <string name="server_hint">For example https://attendance.meridiangroup.co.za</string>
+    <string name="server_test">Test connection</string>
+    <string name="server_default">Use default</string>
+    <string name="server_logout_warning">Changing the server signs you out of this device.</string>
+    <string name="server_changed">Server changed. Please sign in again.</string>
+
+    <!-- First-run setup (docs/API.md §0) -->
+    <string name="setup_card_title">Set up Meridian Attendance</string>
+    <string name="setup_card_body">This system has no administrator yet. Create the first administrator account to get started.</string>
+    <string name="setup_card_action">Set up Meridian Attendance</string>
+    <string name="setup_title">First-time setup</string>
+    <string name="setup_body">Create the first administrator. This account can manage employees, workplaces and policy from this app.</string>
+    <string name="setup_code">Setup code</string>
+    <string name="setup_code_hint">Supplied by whoever installed the server (FIRST_ADMIN_SETUP_CODE).</string>
+    <string name="setup_employee_number">Employee number</string>
+    <string name="setup_first_name">First name</string>
+    <string name="setup_last_name">Last name</string>
+    <string name="setup_submit">Create administrator</string>
+    <string name="setup_failed">Couldn\'t complete setup</string>
+    <string name="setup_back_to_login">Back to sign in</string>
+    <string name="setup_note">First-time setup closes permanently once an administrator exists. Everything you do here is audit-logged.</string>
+    <string name="setup_notice_title">Setup</string>
 </resources>

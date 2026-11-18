@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -50,13 +51,18 @@ import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.StatusTone
 import za.co.meridiangroup.attendance.ui.components.Banner
 import za.co.meridiangroup.attendance.ui.components.GlassCard
+import za.co.meridiangroup.attendance.ui.common.graphViewModel
 import za.co.meridiangroup.attendance.ui.components.PillButton
+import za.co.meridiangroup.attendance.ui.settings.ServerRow
+import za.co.meridiangroup.attendance.ui.settings.ServerSettingsViewModel
 import za.co.meridiangroup.attendance.ui.theme.MeridianColors
 import za.co.meridiangroup.attendance.ui.theme.Spacing
 
 @Composable
-fun LoginScreen(viewModel: LoginViewModel) {
+fun LoginScreen(viewModel: LoginViewModel, onStartSetup: (Boolean) -> Unit = {}) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val serverSettings: ServerSettingsViewModel = graphViewModel(key = "server-login") { ServerSettingsViewModel(it) }
+    val serverChangedMessage = stringResource(R.string.server_changed)
     var showPassword by rememberSaveable { mutableStateOf(false) }
 
     Box(
@@ -77,6 +83,27 @@ fun LoginScreen(viewModel: LoginViewModel) {
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, color = MeridianColors.White)
             Text(stringResource(R.string.login_subtitle), style = MaterialTheme.typography.bodyMedium, color = MeridianColors.TextMutedDark, textAlign = TextAlign.Center)
             Spacer(Modifier.height(Spacing.xl))
+
+            state.notice?.let {
+                Banner(
+                    title = stringResource(R.string.setup_notice_title), message = it, tone = StatusTone.NEUTRAL,
+                    modifier = Modifier.testTag("login_notice"), actionLabel = stringResource(R.string.action_ok), onAction = viewModel::dismissNotice,
+                )
+                Spacer(Modifier.height(Spacing.m))
+            }
+
+            if (state.needsFirstAdmin) {
+                GlassCard(Modifier.fillMaxWidth().testTag("setup_card")) {
+                    Text(stringResource(R.string.setup_card_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.setup_card_body), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(Spacing.s))
+                    PillButton(
+                        text = stringResource(R.string.setup_card_action), onClick = { onStartSetup(state.setupCodeRequired) },
+                        icon = Icons.Outlined.AdminPanelSettings, modifier = Modifier.fillMaxWidth().testTag("setup_start"),
+                    )
+                }
+                Spacer(Modifier.height(Spacing.m))
+            }
 
             GlassCard(Modifier.fillMaxWidth()) {
                 OutlinedTextField(
@@ -124,6 +151,11 @@ fun LoginScreen(viewModel: LoginViewModel) {
                 TextButton(onClick = viewModel::openForgot, modifier = Modifier.align(Alignment.CenterHorizontally)) {
                     Text(stringResource(R.string.login_forgot))
                 }
+            }
+            Spacer(Modifier.height(Spacing.s))
+            ServerRow(serverSettings, contentColor = MeridianColors.TextMutedDark) {
+                viewModel.onServerChanged()
+                viewModel.showNotice(serverChangedMessage)
             }
             Spacer(Modifier.height(Spacing.l))
             Text(stringResource(R.string.login_popia_note), style = MaterialTheme.typography.bodySmall, color = MeridianColors.TextMutedDark, textAlign = TextAlign.Center)

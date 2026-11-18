@@ -51,7 +51,11 @@ import za.co.meridiangroup.attendance.ui.components.PillButton
 import za.co.meridiangroup.attendance.ui.components.PillStyle
 import za.co.meridiangroup.attendance.ui.components.SectionHeader
 import za.co.meridiangroup.attendance.ui.components.StatusChip
+import za.co.meridiangroup.attendance.core.ServerUrls
+import za.co.meridiangroup.attendance.ui.common.graphViewModel
 import za.co.meridiangroup.attendance.ui.onboarding.PermissionSummary
+import za.co.meridiangroup.attendance.ui.settings.ServerDialog
+import za.co.meridiangroup.attendance.ui.settings.ServerSettingsViewModel
 import za.co.meridiangroup.attendance.ui.theme.Spacing
 
 class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
@@ -62,7 +66,7 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     val message = MutableStateFlow<String?>(null)
     val savingPhone = MutableStateFlow(false)
     val installationId: String = graph.prefs.installationId()
-    val apiHost: String = graph.apiBaseUrl
+    val apiHost: String get() = graph.apiBaseUrl
     val pushAvailable: Boolean get() = graph.fcmTokenManager.firebaseAvailable
 
     init {
@@ -116,6 +120,7 @@ fun ProfileScreen(
     var phoneInput by remember { mutableStateOf("") }
     var showPrivacy by remember { mutableStateOf(false) }
     var confirmLogout by remember { mutableStateOf(false) }
+    val serverSettings: ServerSettingsViewModel = graphViewModel(key = "server-profile") { ServerSettingsViewModel(it) }
 
     LifecycleResumeEffect(Unit) {
         viewModel.recheckPermissions()
@@ -178,8 +183,10 @@ fun ProfileScreen(
                 }
             }
             KeyValueRow(stringResource(R.string.profile_app_version), "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-            KeyValueRow(stringResource(R.string.profile_api_host), android.net.Uri.parse(viewModel.apiHost).host ?: viewModel.apiHost)
+            KeyValueRow(stringResource(R.string.profile_api_host), ServerUrls.display(ServerUrls.rootOf(viewModel.apiHost)))
+            PillButton(stringResource(R.string.server_title), serverSettings::open, Modifier.fillMaxWidth().testTag("profile_server"), style = PillStyle.OUTLINE)
         }
+        ServerDialog(serverSettings) { onLoggedOut() }
 
         PillButton(stringResource(R.string.profile_privacy), { showPrivacy = true }, Modifier.fillMaxWidth(), style = PillStyle.GHOST)
         PillButton(stringResource(R.string.profile_logout), { confirmLogout = true }, Modifier.fillMaxWidth().testTag("logout"), style = PillStyle.DANGER, icon = Icons.AutoMirrored.Outlined.Logout)

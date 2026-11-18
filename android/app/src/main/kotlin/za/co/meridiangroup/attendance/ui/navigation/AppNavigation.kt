@@ -27,7 +27,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
@@ -56,6 +59,8 @@ import za.co.meridiangroup.attendance.ui.auth.ChangePasswordScreen
 import za.co.meridiangroup.attendance.ui.auth.ChangePasswordViewModel
 import za.co.meridiangroup.attendance.ui.auth.LoginScreen
 import za.co.meridiangroup.attendance.ui.auth.LoginViewModel
+import za.co.meridiangroup.attendance.ui.auth.SetupScreen
+import za.co.meridiangroup.attendance.ui.auth.SetupViewModel
 import za.co.meridiangroup.attendance.ui.common.graphViewModel
 import za.co.meridiangroup.attendance.ui.common.rememberGraph
 import za.co.meridiangroup.attendance.ui.confirm.ConfirmationScreen
@@ -121,7 +126,18 @@ fun AppRoot(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Unit) {
     when (val s = session) {
         SessionState.LoggedOut -> {
             val vm = graphViewModel(key = "login") { g -> LoginViewModel(g.authRepository) { g.onSessionActive() } }
-            LoginScreen(vm)
+            var setup by rememberSaveable { mutableStateOf<Boolean?>(null) }
+            val codeRequired = setup
+            if (codeRequired != null) {
+                val setupVm = graphViewModel(key = "setup-$codeRequired") { g -> SetupViewModel(g, codeRequired) }
+                SetupScreen(setupVm) { message ->
+                    setup = null
+                    vm.onServerChanged()
+                    message?.let(vm::showNotice)
+                }
+            } else {
+                LoginScreen(vm, onStartSetup = { required -> setup = required })
+            }
         }
         is SessionState.LoggedIn -> when {
             s.mustChangePassword -> {

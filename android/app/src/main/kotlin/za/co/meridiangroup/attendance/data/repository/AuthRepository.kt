@@ -16,12 +16,14 @@ import za.co.meridiangroup.attendance.data.remote.dto.AuthResponseDto
 import za.co.meridiangroup.attendance.data.remote.dto.ChangePasswordRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.DeviceDto
 import za.co.meridiangroup.attendance.data.remote.dto.DeviceInfoDto
+import za.co.meridiangroup.attendance.data.remote.dto.FirstAdminRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.ForgotPasswordRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.LoginRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.LogoutRequestDto
 import za.co.meridiangroup.attendance.data.remote.dto.MeResponseDto
 import za.co.meridiangroup.attendance.data.remote.dto.NotificationPreferencesDto
 import za.co.meridiangroup.attendance.data.remote.dto.PatchMeRequestDto
+import za.co.meridiangroup.attendance.data.remote.dto.SetupStatusDto
 import za.co.meridiangroup.attendance.data.remote.dto.UserDto
 
 /** Session state that drives the top-level navigation. */
@@ -60,16 +62,30 @@ class AuthRepository(
 
     suspend fun login(identifier: String, password: String): ApiResult<AuthResponseDto> {
         val result = caller.call { api.login(LoginRequestDto(identifier.trim(), password, deviceInfo(prefs.fcmToken()))) }
-        if (result is ApiResult.Success) {
-            val body = result.value
-            tokenStore.save(TokenPair(body.accessToken, body.refreshToken, now() + body.expiresIn * 1000L))
-            val mustChange = body.mustChangePassword || body.user.mustChangePassword
-            prefs.saveUser(body.user, mustChange)
-            prefs.setDeviceStatus(body.device?.status)
-            prefs.fcmToken()?.let { prefs.setFcmTokenUploaded(it) }
-            _state.value = SessionState.LoggedIn(mustChange)
-        }
+        if (result is ApiResult.Success) onAuthenticated(result.value)
         return result
+    }
+
+    /** docs/API.md §0: is this server still waiting for its first administrator? */
+    suspend fun setupStatus(): ApiResult<SetupStatusDto> = caller.call { api.setupStatus() }
+
+    /**
+     * §0 POST /setup/first-admin — creates the very first superadmin and signs them in. The response is the
+     * login response, so the tokens and the cached user are stored exactly as after [login].
+     */
+    suspend fun createFirstAdmin(body: FirstAdminRequestDto): ApiResult<AuthResponseDto> {
+        val result = caller.call { api.setupFirstAdmin(body.copy(device = deviceInfo(prefs.fcmToken()))) }
+        if (result is ApiResult.Success) onAuthenticated(result.value)
+        return result
+    }
+
+    private suspend fun onAuthenticated(body: AuthResponseDto) {
+        tokenStore.save(TokenPair(body.accessToken, body.refreshToken, now() + body.expiresIn * 1000L))
+        val mustChange = body.mustChangePassword || body.user.mustChangePassword
+        prefs.saveUser(body.user, mustChange)
+        prefs.setDeviceStatus(body.device?.status)
+        prefs.fcmToken()?.let { prefs.setFcmTokenUploaded(it) }
+        _state.value = SessionState.LoggedIn(mustChange)
     }
 
     suspend fun forgotPassword(identifier: String): ApiResult<Unit> =

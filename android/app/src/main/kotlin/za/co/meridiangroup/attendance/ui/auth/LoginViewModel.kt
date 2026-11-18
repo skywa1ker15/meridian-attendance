@@ -25,11 +25,35 @@ data class LoginUiState(
     val forgotSent: Boolean = false,
     /** Set when login succeeded; the nav host moves on. */
     val loggedIn: Boolean = false,
+    /** docs/API.md §0: this server has no administrator yet — offer first-run setup. */
+    val needsFirstAdmin: Boolean = false,
+    val setupCodeRequired: Boolean = true,
+    /** One-off notice, e.g. after a 409 setup_complete or a server change. */
+    val notice: String? = null,
 )
 
 class LoginViewModel(private val auth: AuthRepository, private val onLoggedIn: () -> Unit) : ViewModel() {
     private val _state = MutableStateFlow(LoginUiState())
     val state: StateFlow<LoginUiState> = _state.asStateFlow()
+
+    init { checkSetupStatus() }
+
+    /** GET /setup/status — silently ignored when the server cannot be reached (login still works offline-ish). */
+    fun checkSetupStatus() {
+        viewModelScope.launch {
+            val status = auth.setupStatus().getOrNull() ?: return@launch
+            _state.update { it.copy(needsFirstAdmin = status.needsFirstAdmin, setupCodeRequired = status.setupCodeRequired) }
+        }
+    }
+
+    fun showNotice(message: String?) = _state.update { it.copy(notice = message) }
+    fun dismissNotice() = _state.update { it.copy(notice = null) }
+
+    /** After the server address changed: re-run the first-run probe against the new backend. */
+    fun onServerChanged() {
+        _state.update { it.copy(needsFirstAdmin = false, formError = null, notice = null) }
+        checkSetupStatus()
+    }
 
     fun onIdentifier(v: String) = _state.update { it.copy(identifier = v, identifierError = null, formError = null) }
     fun onPassword(v: String) = _state.update { it.copy(password = v, passwordError = null, formError = null) }
