@@ -101,8 +101,12 @@ tools/core-check && tools/syntax-check     # optional offline sanity checks
 
 ## 4. Known gaps / decisions to confirm
 
-* Manage screens are verified by CI (`assembleDebug`, unit tests, lint) and the DTO contract tests, not yet by
-  instrumented UI tests or a run against a live backend on a phone.
+* Manage screens are verified by CI (`assembleDebug`, unit tests, lint), by the DTO contract tests and by
+  `tools/contract-roundtrip` against a live backend (52 checks: overview, live, review queue, exceptions,
+  departments, devices, roles, audit, admin sessions and detail, manual requests, report preview, the employee
+  directory including create/edit/role/reset/deactivate/reactivate, and workplace/policy PATCH bodies built by
+  `WorkplacePayload.diff` / `PolicyPayload.diff`). Not yet verified: instrumented UI tests of these screens and
+  a run on a physical phone.
 
 * `coordinates_confirmed` is read from `/config/workplaces` but is not listed in `docs/API.md` §3. The app never
   registers geofences when it is `false`; if the backend omits it, the app treats coordinates as confirmed only

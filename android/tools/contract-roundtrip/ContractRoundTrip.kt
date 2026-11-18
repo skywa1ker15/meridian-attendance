@@ -124,13 +124,63 @@ fun main(args: Array<String>) {
     if (reuseCode == 401 && reuse == "token_reused") { passed++; println("  ok   refresh-token reuse detected ($reuse)") } else failures += "reuse: $reuseCode $reuse"
 
     System.getenv("RT_MANAGER_ID")?.let { mid ->
-        println("Manager screens:")
+        println("Manage section (administrator screens as the app performs them):")
         token = null
         val m = step("manager login", "POST", "/auth/login", enc(LoginRequestDto(mid, System.getenv("RT_MANAGER_PW")!!, null)), AuthResponseDto.serializer())
         token = m?.accessToken
+        val today = java.time.LocalDate.now().toString()
+        val weekAgo = java.time.LocalDate.now().minusDays(6).toString()
+
+        step("overview", "GET", "/admin/overview?date=$today", null, OverviewDto.serializer())
         step("live attendance", "GET", "/admin/attendance/live", null, LiveAttendanceResponseDto.serializer())
         step("review queue", "GET", "/admin/attendance/events?status=under_review&page=1", null, PageDto.serializer(EventDto.serializer()))
+        step("exceptions", "GET", "/admin/attendance/exceptions?from=$weekAgo&to=$today&page=1", null, PageDto.serializer(AttendanceExceptionDto.serializer()))
+        step("departments", "GET", "/admin/departments", null, ItemsDto.serializer(AdminDepartmentDto.serializer()))
+        step("devices", "GET", "/admin/devices?page=1", null, PageDto.serializer(DeviceDto.serializer()))
+        step("roles", "GET", "/admin/roles", null, RolesResponseDto.serializer())
+        step("audit logs", "GET", "/admin/audit-logs?page=1", null, PageDto.serializer(AuditLogDto.serializer()))
+        step("admin sessions", "GET", "/admin/attendance/sessions?from=$weekAgo&to=$today&page=1", null, PageDto.serializer(SessionDto.serializer()))
+            ?.items?.firstOrNull()?.let { session ->
+                step("admin session detail", "GET", "/admin/attendance/sessions/${session.id}", null, SessionDetailDto.serializer())
+            }
+        step("admin manual requests", "GET", "/admin/manual-requests?status=pending&page=1", null, PageDto.serializer(ManualRequestDto.serializer()))
+        step("report preview (daily)", "GET", "/admin/reports/daily?from=$weekAgo&to=$today&format=json", null, ReportDto.serializer())
+
+        // Employees: directory, one-time password on create, detail, edit, role, reset, export.
+        val directory = step("employees page", "GET", "/admin/employees?page=1&page_size=5", null, PageDto.serializer(UserDto.serializer()))
+        directory?.items?.firstOrNull()?.let { user ->
+            step("employee detail", "GET", "/admin/employees/${user.id}", null, EmployeeDetailDto.serializer())
+        }
+        val suffix = UUID.randomUUID().toString().take(6).uppercase()
+        val created = step("create employee", "POST", "/admin/employees",
+            enc(EmployeeCreateRequestDto("RT-$suffix", "Roundtrip", "Tester", "roundtrip.$suffix@example.co.za", role = "employee")),
+            EmployeeCreatedDto.serializer(), expect = setOf(201))
+        if (created != null && created.temporaryPassword.isNullOrBlank()) failures += "create employee returned no temporary_password"
+        created?.user?.id?.let { newId ->
+            step("edit employee", "PATCH", "/admin/employees/$newId", enc(EmployeeUpdateRequestDto(phone = "+27 31 000 0000")), UserDto.serializer())
+            step("change role", "POST", "/admin/employees/$newId/role", enc(RoleRequestDto("manager")), UserDto.serializer())
+            step("reset password", "POST", "/admin/employees/$newId/reset-password", null, TemporaryPasswordDto.serializer())
+            step("deactivate", "POST", "/admin/employees/$newId/deactivate", enc(ReasonRequestDto("contract round-trip test")), UserDto.serializer())
+            step("reactivate", "POST", "/admin/employees/$newId/reactivate", null, UserDto.serializer())
+        }
+
+        // Workplaces and policy: the app sends a full body on create and only changed keys on edit.
+        val workplaces = step("admin workplaces", "GET", "/admin/workplaces", null, ItemsDto.serializer(WorkplaceDto.serializer()))
+        workplaces?.items?.firstOrNull()?.let { existing ->
+            val edited = existing.copy(radiusM = existing.radiusM + 1.0)
+            val diff = WorkplacePayload.diff(existing, edited)
+            step("patch workplace (diff body)", "PATCH", "/admin/workplaces/${existing.id}", diff.toString(), WorkplaceDto.serializer())
+            step("patch workplace back", "PATCH", "/admin/workplaces/${existing.id}", WorkplacePayload.diff(edited, existing).toString(), WorkplaceDto.serializer())
+        }
+        val policy = step("admin policy", "GET", "/admin/policy", null, PolicyDto.serializer())
+        policy?.let {
+            val diff = PolicyPayload.diff(it, it.copy(graceMinutes = it.graceMinutes))
+            if (diff.isNotEmpty()) failures += "policy diff of an unchanged policy is not empty: ${diff.keys}"
+            step("patch policy (one key)", "PATCH", "/admin/policy", PolicyPayload.diff(it, it.copy(graceMinutes = it.graceMinutes + 1)).toString(), PolicyDto.serializer())
+            step("patch policy back", "PATCH", "/admin/policy", PolicyPayload.diff(it.copy(graceMinutes = it.graceMinutes + 1), it).toString(), PolicyDto.serializer())
+        }
     }
+
     finish()
 }
 
