@@ -118,6 +118,8 @@ import za.co.meridiangroup.attendance.ui.notifications.NotificationsViewModel
 import za.co.meridiangroup.attendance.ui.onboarding.OnboardingScreen
 import za.co.meridiangroup.attendance.ui.profile.ProfileScreen
 import za.co.meridiangroup.attendance.ui.profile.ProfileViewModel
+import za.co.meridiangroup.attendance.ui.settings.AppSettingsScreen
+import za.co.meridiangroup.attendance.ui.settings.AppSettingsViewModel
 import za.co.meridiangroup.attendance.ui.requests.NewRequestScreen
 import za.co.meridiangroup.attendance.ui.requests.NewRequestViewModel
 import za.co.meridiangroup.attendance.ui.requests.RequestsScreen
@@ -134,6 +136,7 @@ object Routes {
     const val NEW_REQUEST = "requests/new?sessionId={sessionId}&workDate={workDate}"
     const val PROFILE_CORRECTION = "profile/correction"
     const val CHANGE_PASSWORD = "profile/password"
+    const val SETTINGS = "settings"
     const val ONBOARDING = "onboarding"
     const val MANAGE = "manage"
     const val MANAGE_EMPLOYEES = "manage/employees"
@@ -389,6 +392,7 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
                     onRequestCorrection = { nav.navigate(Routes.PROFILE_CORRECTION) },
                     onRerunOnboarding = { nav.navigate(Routes.ONBOARDING) },
                     onOpenAppSettings = { context.startActivity(graph.permissionChecker.appSettingsIntent()) },
+                    onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                     onLoggedOut = {},
                 )
             }
@@ -435,6 +439,9 @@ private fun MainScaffold(pendingDeepLink: Intent?, onDeepLinkConsumed: () -> Uni
                     graphViewModel(key = "change-pw") { g -> ChangePasswordViewModel(g.authRepository) { user?.employeeNumber } },
                     forced = false, onDone = { nav.popBackStack() }, onLogout = null,
                 )
+            }
+            composable(Routes.SETTINGS) {
+                AppSettingsScreen(graphViewModel(key = "app-settings") { AppSettingsViewModel(it) })
             }
             composable(Routes.ONBOARDING, deepLinks = listOf(navDeepLink { uriPattern = DeepLinks.ONBOARDING })) {
                 OnboardingScreen(onFinished = { if (!nav.popBackStack()) nav.navigate(Routes.HOME) })

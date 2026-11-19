@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -35,7 +36,9 @@ class MainActivity : ComponentActivity() {
         }
         if (savedInstanceState == null) pendingDeepLink = intent?.takeIf { it.data != null }
         setContent {
-            MeridianTheme {
+            val themeMode by graph.prefs.themeModeFlow.collectAsState(initial = "system")
+            val fontSizeLevel by graph.prefs.fontSizeFlow.collectAsState(initial = 1)
+            MeridianTheme(themeMode = themeMode, fontSizeLevel = fontSizeLevel) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     if (ready) AppRoot(pendingDeepLink = pendingDeepLink, onDeepLinkConsumed = { pendingDeepLink = null })
                 }

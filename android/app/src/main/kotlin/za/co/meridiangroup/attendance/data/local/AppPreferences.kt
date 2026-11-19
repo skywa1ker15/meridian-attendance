@@ -40,6 +40,20 @@ class AppPreferences(context: Context) {
         val deviceStatus = stringPreferencesKey("device_status")
         /** Backend root chosen in Settings → Server (survives logout; null = BuildConfig default). */
         val serverRoot = stringPreferencesKey("server_root")
+
+        // ---- App settings (survive logout) ----
+        /** "system" (default), "light", "dark" */
+        val themeMode = stringPreferencesKey("settings_theme_mode")
+        /** 0 = Small, 1 = Medium (default), 2 = Large */
+        val fontSize = intPreferencesKey("settings_font_size")
+        val reduceAnimations = booleanPreferencesKey("settings_reduce_animations")
+        val notificationSound = booleanPreferencesKey("settings_notification_sound")
+        val vibration = booleanPreferencesKey("settings_vibration")
+        val biometricLock = booleanPreferencesKey("settings_biometric_lock")
+        /** Minutes: 0 = immediately, 1, 5, 15 */
+        val autoLockTimeout = intPreferencesKey("settings_auto_lock_timeout")
+        val showLocationOnEvents = booleanPreferencesKey("settings_show_location_on_events")
+        val offlineMode = booleanPreferencesKey("settings_offline_mode")
     }
 
     /** Generated once per installation and reused for every login (API.md `device.device_id`). */
@@ -58,6 +72,27 @@ class AppPreferences(context: Context) {
     val policyFlow: Flow<PolicyDto?> = ds.data.map { prefs -> prefs[Keys.policyJson]?.let { decodePolicy(it) } }
     val pushEnabledFlow: Flow<Boolean> = ds.data.map { it[Keys.pushEnabled] ?: true }
     val deviceStatusFlow: Flow<String?> = ds.data.map { it[Keys.deviceStatus] }
+
+    // ---- App settings flows (survive logout) ----
+    val themeModeFlow: Flow<String> = ds.data.map { it[Keys.themeMode] ?: "system" }
+    val fontSizeFlow: Flow<Int> = ds.data.map { it[Keys.fontSize] ?: 1 }
+    val reduceAnimationsFlow: Flow<Boolean> = ds.data.map { it[Keys.reduceAnimations] ?: false }
+    val notificationSoundFlow: Flow<Boolean> = ds.data.map { it[Keys.notificationSound] ?: true }
+    val vibrationFlow: Flow<Boolean> = ds.data.map { it[Keys.vibration] ?: true }
+    val biometricLockFlow: Flow<Boolean> = ds.data.map { it[Keys.biometricLock] ?: false }
+    val autoLockTimeoutFlow: Flow<Int> = ds.data.map { it[Keys.autoLockTimeout] ?: 1 }
+    val showLocationOnEventsFlow: Flow<Boolean> = ds.data.map { it[Keys.showLocationOnEvents] ?: true }
+    val offlineModeFlow: Flow<Boolean> = ds.data.map { it[Keys.offlineMode] ?: true }
+
+    suspend fun setThemeMode(mode: String) = ds.edit { it[Keys.themeMode] = mode }
+    suspend fun setFontSize(size: Int) = ds.edit { it[Keys.fontSize] = size }
+    suspend fun setReduceAnimations(enabled: Boolean) = ds.edit { it[Keys.reduceAnimations] = enabled }
+    suspend fun setNotificationSound(enabled: Boolean) = ds.edit { it[Keys.notificationSound] = enabled }
+    suspend fun setVibration(enabled: Boolean) = ds.edit { it[Keys.vibration] = enabled }
+    suspend fun setBiometricLock(enabled: Boolean) = ds.edit { it[Keys.biometricLock] = enabled }
+    suspend fun setAutoLockTimeout(minutes: Int) = ds.edit { it[Keys.autoLockTimeout] = minutes }
+    suspend fun setShowLocationOnEvents(enabled: Boolean) = ds.edit { it[Keys.showLocationOnEvents] = enabled }
+    suspend fun setOfflineMode(enabled: Boolean) = ds.edit { it[Keys.offlineMode] = enabled }
 
     val serverRootFlow: Flow<String?> = ds.data.map { it[Keys.serverRoot] }
     suspend fun serverRoot(): String? = ds.data.first()[Keys.serverRoot]

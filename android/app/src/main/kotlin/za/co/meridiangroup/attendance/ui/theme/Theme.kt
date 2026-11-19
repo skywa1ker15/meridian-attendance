@@ -156,6 +156,31 @@ private val MeridianTypography = Typography().let { base ->
     )
 }
 
+/** Font size scale: 0 = Small (0.85), 1 = Medium (1.0), 2 = Large (1.2). */
+fun scaledTypography(fontSizeLevel: Int): Typography {
+    val scale = when (fontSizeLevel) { 0 -> 0.85f; 2 -> 1.2f; else -> 1.0f }
+    if (scale == 1.0f) return MeridianTypography
+    return MeridianTypography.let { base ->
+        base.copy(
+            displayLarge = base.displayLarge.copy(fontSize = base.displayLarge.fontSize * scale, lineHeight = base.displayLarge.lineHeight * scale),
+            displayMedium = base.displayMedium.copy(fontSize = base.displayMedium.fontSize * scale, lineHeight = base.displayMedium.lineHeight * scale),
+            displaySmall = base.displaySmall.copy(fontSize = base.displaySmall.fontSize * scale, lineHeight = base.displaySmall.lineHeight * scale),
+            headlineLarge = base.headlineLarge.copy(fontSize = base.headlineLarge.fontSize * scale, lineHeight = base.headlineLarge.lineHeight * scale),
+            headlineMedium = base.headlineMedium.copy(fontSize = base.headlineMedium.fontSize * scale, lineHeight = base.headlineMedium.lineHeight * scale),
+            headlineSmall = base.headlineSmall.copy(fontSize = base.headlineSmall.fontSize * scale, lineHeight = base.headlineSmall.lineHeight * scale),
+            titleLarge = base.titleLarge.copy(fontSize = base.titleLarge.fontSize * scale, lineHeight = base.titleLarge.lineHeight * scale),
+            titleMedium = base.titleMedium.copy(fontSize = base.titleMedium.fontSize * scale, lineHeight = base.titleMedium.lineHeight * scale),
+            titleSmall = base.titleSmall.copy(fontSize = base.titleSmall.fontSize * scale, lineHeight = base.titleSmall.lineHeight * scale),
+            bodyLarge = base.bodyLarge.copy(fontSize = base.bodyLarge.fontSize * scale, lineHeight = base.bodyLarge.lineHeight * scale),
+            bodyMedium = base.bodyMedium.copy(fontSize = base.bodyMedium.fontSize * scale, lineHeight = base.bodyMedium.lineHeight * scale),
+            bodySmall = base.bodySmall.copy(fontSize = base.bodySmall.fontSize * scale, lineHeight = base.bodySmall.lineHeight * scale),
+            labelLarge = base.labelLarge.copy(fontSize = base.labelLarge.fontSize * scale, lineHeight = base.labelLarge.lineHeight * scale),
+            labelMedium = base.labelMedium.copy(fontSize = base.labelMedium.fontSize * scale, lineHeight = base.labelMedium.lineHeight * scale),
+            labelSmall = base.labelSmall.copy(fontSize = base.labelSmall.fontSize * scale, lineHeight = base.labelSmall.lineHeight * scale),
+        )
+    }
+}
+
 object Spacing {
     val xs = 4.dp
     val s = 8.dp
@@ -165,13 +190,28 @@ object Spacing {
     val xxl = 32.dp
 }
 
+/**
+ * @param themeMode "system" (default), "light", or "dark"
+ * @param fontSizeLevel 0 = Small, 1 = Medium (default), 2 = Large
+ */
 @Composable
-fun MeridianTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val extended = if (darkTheme) DarkExtended else LightExtended
+fun MeridianTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: String = "system",
+    fontSizeLevel: Int = 1,
+    content: @Composable () -> Unit,
+) {
+    val isDark = when (themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> darkTheme
+    }
+    val extended = if (isDark) DarkExtended else LightExtended
+    val typography = scaledTypography(fontSizeLevel)
     androidx.compose.runtime.CompositionLocalProvider(LocalExtendedColors provides extended) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkScheme else LightScheme,
-            typography = MeridianTypography,
+            colorScheme = if (isDark) DarkScheme else LightScheme,
+            typography = typography,
             shapes = MeridianShapes,
             content = content,
         )
