@@ -40,7 +40,7 @@ fun String.ensureTrailingSlash(): String = if (endsWith("/")) this else "$this/"
 
 val appVersionCode: Int = configValue("MERIDIAN_VERSION_CODE")?.toIntOrNull() ?: 1
 val appVersionName: String = configValue("MERIDIAN_VERSION_NAME") ?: "1.0.0"
-val debugApiBaseUrl: String = (configValue("MERIDIAN_DEBUG_API_BASE_URL") ?: "http://10.0.2.2:8000").ensureTrailingSlash()
+val debugApiBaseUrl: String = (configValue("MERIDIAN_DEBUG_API_BASE_URL") ?: "https://meridian-api-dbvk1c3l550s7383beug.onrender.com").ensureTrailingSlash()
 val releaseApiBaseUrl: String? = configValue("MERIDIAN_API_BASE_URL")?.ensureTrailingSlash()
 
 // Release signing is read from the environment / gradle properties only. No keystore is ever
