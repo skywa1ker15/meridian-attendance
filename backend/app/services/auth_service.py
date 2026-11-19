@@ -85,14 +85,13 @@ def login(db: Session, identifier: str, password: str, device_in: DeviceIn | Non
         raise ApiError(423, "account_locked", "Too many failed attempts. Try again later.", {"retry_after": retry}, headers={"Retry-After": str(retry)})
 
     if user.password_hash is None:
-        # The account was created by invitation and has never been activated. Telling the
-        # caller so does reveal that the identifier exists — but they had to know the exact
-        # email or employee number to get here, which the bad-password path already confirms
-        # only by timing. The alternative (a generic "wrong password" for an account that has
-        # no password) sends employees to the helpdesk, so the trade-off is deliberate.
+        # Account created by invitation but never activated — no password to check.
+        # Return the same generic error as an unknown user to prevent account enumeration.
+        # The employee can check their invitation status via GET /auth/invitation?token=….
+        verify_password(password, None)  # constant-time blinding
         audit.record(db, action="auth.login_failed", actor=None, entity_type="user", entity_id=user.id, after={"reason": "invitation_pending"}, request=request)
         db.commit()
-        raise ApiError(401, "invitation_pending", "Your account hasn't been set up yet. Open the invitation link we emailed you, or ask your manager to resend it.")
+        raise ApiError(401, "invalid_credentials", "Email/employee number or password is incorrect.")
 
     if not verify_password(password, user.password_hash):
         user.failed_login_attempts = (user.failed_login_attempts or 0) + 1

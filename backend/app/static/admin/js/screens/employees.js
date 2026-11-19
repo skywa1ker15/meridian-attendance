@@ -2,7 +2,7 @@
 
 import { api } from '../api.js';
 import { session } from '../session.js';
-import { el, replace, pageHead, button, dataTable, input, select, field, statusChip, debounce, skeleton, errorState, openModal, confirmDialog, formError, showFormError, setBusy, copyBox, toast, handleError } from '../ui.js';
+import { el, replace, pageHead, button, dataTable, input, select, field, checkbox, statusChip, debounce, skeleton, errorState, openModal, confirmDialog, formError, showFormError, setBusy, copyBox, toast, handleError } from '../ui.js';
 import { fullName, titleCase, statusLabel, fmtRelative } from '../format.js';
 import { replaceQuery } from '../router.js';
 import { departmentSelect, getDepartments, cleanQuery, parsePage, assignableRoles } from '../data.js';
@@ -65,7 +65,8 @@ export function render(container, { setTitle, query, navigate }) {
       onRowClick: (u) => navigate(`/employees/${u.id}`),
       rowActions: (u) => [
         button('View', { kind: 'secondary', size: 'sm', onClick: () => navigate(`/employees/${u.id}`) }),
-        canWrite && u.status === 'active' ? button('Reset password', { kind: 'secondary', size: 'sm', icon: 'key', onClick: () => resetPassword(u) }) : null,
+        canWrite && u.status === 'active' && !u.last_login_at ? button('Invite', { kind: 'secondary', size: 'sm', icon: 'send', onClick: () => sendInvitation(u, load) }) : null,
+        canWrite && u.status === 'active' && u.last_login_at ? button('Reset password', { kind: 'secondary', size: 'sm', icon: 'key', onClick: () => resetPassword(u) }) : null,
       ],
       emptyText: state.search || state.department_id || state.status || state.role ? 'No employees match these filters.' : 'No employees yet. Create the first employee to get started.',
       pager: { page: data.page || state.page, pageSize: data.page_size || PAGE_SIZE, total: data.total || 0, onPage: (p) => { state.page = p; load(); } },
@@ -118,6 +119,7 @@ function openCreate(navigate) {
     deptSel = select([{ value: '', label: 'No department' }, ...items.filter((d) => d.active !== false).map((d) => ({ value: d.id, label: `${d.name} (${d.code})` }))], { 'data-testid': 'new-department' }, '');
     replace(deptHost, el('label', { for: deptSel.id = 'new-dept' }, 'Department'), deptSel);
   }).catch(() => {});
+  const inviteCheck = checkbox('Send invitation email', { checked: true, 'data-testid': 'new-invite' });
   const err = formError('');
   const submit = button('Create employee', { type: 'submit', attrs: { 'data-testid': 'new-submit' } });
   const cancel = button('Cancel', { kind: 'secondary' });
@@ -127,6 +129,7 @@ function openCreate(navigate) {
       field('First name', f.first_name), field('Last name', f.last_name),
       field('Email', f.email), field('Phone', f.phone, { hint: 'Optional' }),
       deptHost, field('Temporary password', f.temporary_password, { hint: 'Optional · the employee must change it at first sign-in' })),
+    el('div', { style: { padding: '4px 0' } }, inviteCheck.el),
     err, el('div', { class: 'form-actions' }, cancel, submit));
   const m = openModal({ title: 'New employee', body: form, wide: true });
   cancel.addEventListener('click', () => m.close());
@@ -138,6 +141,7 @@ function openCreate(navigate) {
       email: f.email.value.trim(), phone: f.phone.value.trim(), department_id: deptSel.value, role: f.role.value,
       temporary_password: f.temporary_password.value,
     });
+    if (inviteCheck.input.checked) body.send_invitation = true;
     const missing = ['employee_number', 'first_name', 'last_name', 'email'].filter((k) => !body[k]);
     if (missing.length) { showFormError(err, `Required: ${missing.map(titleCase).join(', ')}.`); return; }
     setBusy(submit, true, 'Creating…');
@@ -145,11 +149,50 @@ function openCreate(navigate) {
       const res = await api.post('/admin/employees', body);
       m.close();
       toast(`${fullName(res.user)} created.`, 'success');
-      showTemporaryPassword(res.temporary_password, res.user,
-        [(close) => button('Open profile', { kind: 'secondary', onClick: () => { close(); navigate(`/employees/${res.user.id}`); } })]);
+      if (res.invitation) {
+        showInvitationResult(res.invitation, res.user,
+          [(close) => button('Open profile', { kind: 'secondary', onClick: () => { close(); navigate(`/employees/${res.user.id}`); } })]);
+      } else if (res.temporary_password) {
+        showTemporaryPassword(res.temporary_password, res.user,
+          [(close) => button('Open profile', { kind: 'secondary', onClick: () => { close(); navigate(`/employees/${res.user.id}`); } })]);
+      }
       window.dispatchEvent(new CustomEvent('employees:changed'));
     } catch (ex) {
       showFormError(err, ex.status === 409 ? `${ex.message} Check the employee number and email are unique.` : ex);
     } finally { setBusy(submit, false, 'Creating…'); }
   });
+}
+
+/** Send (or resend) an invitation email for an employee who hasn't activated yet. */
+export async function sendInvitation(user, reload) {
+  const ok = await confirmDialog({ title: 'Send invitation', message: `Send an invitation email to ${fullName(user)} (${user.email})? They will receive a link to set up their password and activate their account.`, confirmLabel: 'Send invitation' });
+  if (!ok) return null;
+  try {
+    const res = await api.post(`/admin/employees/${user.id}/invite`);
+    showInvitationResult(res, user);
+    if (reload) reload();
+    return res;
+  } catch (err) { handleError(err); return null; }
+}
+
+/** Show the outcome of an invitation — either "sent" or the manual link when email failed. */
+export function showInvitationResult(inv, user, extraActions = []) {
+  const sent = inv.sent;
+  const link = inv.link;
+  const done = button('Done');
+  const body = [];
+  if (sent) {
+    body.push(el('p', {}, `An invitation email has been sent to ${user.email || fullName(user)}. The link expires on ${new Date(inv.expires_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}.`));
+  } else if (link) {
+    body.push(
+      el('p', { class: 'warning' }, 'Email could not be sent (email is not configured on this server). Share this link with the employee manually through a secure channel — it is shown only once.'),
+      copyBox(link),
+      el('p', { class: 'muted small' }, `Expires: ${new Date(inv.expires_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}`));
+  } else {
+    body.push(el('p', {}, `Invitation sent to ${fullName(user)}.`));
+  }
+  body.push(el('div', { class: 'form-actions' }, extraActions.map((a) => a(() => m.close())), done));
+  const m = openModal({ title: sent ? 'Invitation sent' : 'Invitation link', body: el('div', { class: 'stack' }, ...body) });
+  done.addEventListener('click', () => m.close());
+  return m;
 }

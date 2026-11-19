@@ -6,7 +6,11 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -38,6 +42,10 @@ private val Context.secureTokenDataStore: DataStore<Preferences> by preferencesD
 class TokenStore(context: Context, private val crypto: KeystoreCrypto = KeystoreCrypto()) : TokenHolder {
     private val dataStore = context.applicationContext.secureTokenDataStore
     private val key = stringPreferencesKey("token_blob")
+    /** Dedicated IO scope for fire-and-forget disk writes. SupervisorJob prevents one failure from
+     *  cancelling subsequent writes. The in-memory cache is updated synchronously so callers never
+     *  see stale data; the disk write simply persists for the next cold-start. */
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var loaded = false
     @Volatile private var cache: TokenPair? = null
@@ -47,6 +55,8 @@ class TokenStore(context: Context, private val crypto: KeystoreCrypto = Keystore
         if (!loaded) {
             synchronized(lock) {
                 if (!loaded) {
+                    // runBlocking is acceptable here: called from OkHttp threads (never Main) and only on
+                    // the first access — thereafter the in-memory cache is used.
                     cache = runBlocking { readFromDisk() }
                     loaded = true
                 }
@@ -65,7 +75,8 @@ class TokenStore(context: Context, private val crypto: KeystoreCrypto = Keystore
 
     override fun save(pair: TokenPair) {
         synchronized(lock) { cache = pair; loaded = true }
-        runBlocking {
+        // Persist to disk on IO — never blocks the calling thread (which may be Main after login).
+        ioScope.launch {
             val blob = crypto.encrypt(ApiJson.json.encodeToString(TokenPair.serializer(), pair))
             dataStore.edit { it[key] = blob }
         }
@@ -73,6 +84,6 @@ class TokenStore(context: Context, private val crypto: KeystoreCrypto = Keystore
 
     override fun clear() {
         synchronized(lock) { cache = null; loaded = true }
-        runBlocking { dataStore.edit { it.remove(key) } }
+        ioScope.launch { dataStore.edit { it.remove(key) } }
     }
 }

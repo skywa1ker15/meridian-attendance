@@ -38,4 +38,8 @@
 
 # Room-generated database implementation is looked up by name (AppDatabase_Impl)
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+# AppLink / AppLinkKind are used by rememberSaveable's custom Saver in navigation; keep field names.
+-keep class za.co.meridiangroup.attendance.core.AppLink { *; }
+-keep class za.co.meridiangroup.attendance.core.AppLinkKind { *; }
+
 # Play services geofencing / Firebase ship their own consumer rules; nothing extra needed.

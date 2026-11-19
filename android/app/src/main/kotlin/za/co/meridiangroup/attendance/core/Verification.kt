@@ -72,7 +72,13 @@ object Verification {
         return bssidMatch || ssidMatch
     }
 
-    fun evaluate(workplace: WorkplaceGeometry, signals: DetectionSignals): LocalVerification {
+    /**
+     * @param isDeparture true when the event is a departure. The geofence check is inverted:
+     *   being *outside* the geofence is the expected state for a departure (location_consistent),
+     *   while still being *inside* suggests the detection may be wrong (departure_still_inside).
+     *   Wi-Fi requirement applies to arrivals only; for departures it's informational.
+     */
+    fun evaluate(workplace: WorkplaceGeometry, signals: DetectionSignals, isDeparture: Boolean = false): LocalVerification {
         val notes = mutableListOf<String>()
         val loc = signals.location
         val distance = loc?.let { Geo.distanceMeters(it.latitude, it.longitude, workplace.latitude, workplace.longitude) }
@@ -80,19 +86,31 @@ object Verification {
         val accuracyOk = loc?.let { it.accuracyM <= workplace.accuracyThresholdM }
         val wifi = wifiMatches(workplace, signals.wifiSsid, signals.wifiBssid)
 
+        // For arrivals: inside == good.  For departures: outside == good.
+        val locationConsistent = if (isDeparture) inside?.let { !it } else inside
+
         if (loc == null) notes += "no_location"
-        if (inside == false) notes += "outside_geofence"
+        if (isDeparture) {
+            if (inside == true) notes += "departure_still_inside"
+        } else {
+            if (inside == false) notes += "outside_geofence"
+        }
         if (accuracyOk == false) notes += "accuracy_above_threshold"
         if (workplace.wifiVerificationEnabled && wifi == false) notes += "wifi_not_matched"
 
         var score = 0.0
         var usedWeight = 0.0
-        if (inside != null) { usedWeight += WEIGHT_INSIDE; if (inside) score += WEIGHT_INSIDE }
+        if (locationConsistent != null) { usedWeight += WEIGHT_INSIDE; if (locationConsistent) score += WEIGHT_INSIDE }
         if (accuracyOk != null) { usedWeight += WEIGHT_ACCURACY; if (accuracyOk) score += WEIGHT_ACCURACY }
         if (wifi != null) { usedWeight += WEIGHT_WIFI; if (wifi) score += WEIGHT_WIFI }
         val normalised = if (usedWeight == 0.0) 0.0 else (score / usedWeight).coerceIn(0.0, 1.0)
 
-        val review = loc == null || inside == false || (workplace.wifiRequired && wifi != true)
+        // Wi-Fi requirement is arrival-only; departures are reviewed only on geofence inconsistency.
+        val review = if (isDeparture) {
+            loc == null || inside == true
+        } else {
+            loc == null || inside == false || (workplace.wifiRequired && wifi != true)
+        }
         return LocalVerification(
             distanceM = distance,
             insideGeofence = inside,

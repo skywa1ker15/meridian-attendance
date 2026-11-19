@@ -161,13 +161,10 @@ interface AttendanceApi {
     ): Response<PageDto<EventDto>>
 
     @POST("admin/attendance/events/{id}/approve")
-    suspend fun adminApproveEvent(@Path("id") id: String, @Body body: ReviewNoteRequestDto): Response<EventDto>
+    suspend fun adminApproveEvent(@Path("id") id: String, @Body body: OptionalNoteRequestDto): Response<EventDto>
 
     @POST("admin/attendance/events/{id}/reject")
     suspend fun adminRejectEvent(@Path("id") id: String, @Body body: ReviewNoteRequestDto): Response<EventDto>
-
-    @POST("admin/attendance/events/{id}/approve")
-    suspend fun adminApproveEventOptionalNote(@Path("id") id: String, @Body body: OptionalNoteRequestDto): Response<EventDto>
 
     // ---- §0 First-run setup (no authentication) ----
     @GET("setup/status")

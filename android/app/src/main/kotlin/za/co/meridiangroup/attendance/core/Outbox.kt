@@ -38,6 +38,9 @@ object OutboxRules {
     const val BASE_BACKOFF_MILLIS = 30_000L
     const val MAX_BACKOFF_MILLIS = 60 * 60 * 1000L
     const val PENDING_APPROVAL_BACKOFF_MILLIS = 15 * 60 * 1000L
+    /** Safety cap on outbox rows. When exceeded, the oldest dead rows are pruned first; if still
+     *  over the limit the oldest live rows are marked dead with "outbox_overflow". */
+    const val MAX_OUTBOX_SIZE = 500
 
     /**
      * Orders rows by creation time then id (so a confirmation always follows the event it refers to),

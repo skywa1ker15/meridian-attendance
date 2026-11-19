@@ -151,6 +151,7 @@ services:
       - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
     entrypoint: ["/bin/sh", "-c"]
     # Simple in-container scheduler: sleep until the configured hour, run a backup, repeat.
+    # Checks once per minute so the 60-second window at HH:05 is never missed.
     command:
       - |
         set -eu
@@ -159,9 +160,9 @@ services:
           now_h=$$(date -u +%H); now_m=$$(date -u +%M)
           if [ "$$now_h" = "$${BACKUP_HOUR_UTC}" ] && [ "$$now_m" = "05" ]; then
             /bin/sh /usr/local/bin/backup.sh || echo "BACKUP FAILED $$(date -u)"
-            sleep 60
+            sleep 90
           fi
-          sleep 30
+          sleep 55
         done
     depends_on:
       db:

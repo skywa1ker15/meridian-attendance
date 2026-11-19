@@ -21,7 +21,8 @@ from app.schemas.common import PageParams
 _bearer = HTTPBearer(auto_error=False)
 
 # Paths an authenticated user may call even while a password change is required.
-_PASSWORD_CHANGE_ALLOWED = ("/api/v1/auth/password/change", "/api/v1/auth/me", "/api/v1/auth/logout", "/api/v1/auth/refresh")
+# Exact match (frozenset) prevents accidental prefix overlap with future endpoints.
+_PASSWORD_CHANGE_ALLOWED: frozenset[str] = frozenset({"/api/v1/auth/password/change", "/api/v1/auth/me", "/api/v1/auth/logout", "/api/v1/auth/refresh"})
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -58,7 +59,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db), creds: HTT
         if device.last_seen_at is None or now - device.last_seen_at > timedelta(minutes=1):
             device.last_seen_at = now
             db.commit()
-    if user.must_change_password and not request.url.path.startswith(_PASSWORD_CHANGE_ALLOWED):
+    if user.must_change_password and request.url.path not in _PASSWORD_CHANGE_ALLOWED:
         raise ApiError(403, "password_change_required", "You must change your password before continuing.")
     request.state.user = user
     request.state.device = device

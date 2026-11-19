@@ -70,11 +70,12 @@ export function employeePicker({ placeholder = 'Search by name, number or email'
 
 // ---------- Pure helpers (unit-tested in admin-dashboard/tests/unit) ----------
 
-/** Drop empty / null / undefined values so they never become "?x=" query params. */
+/** Drop empty / null / undefined values so they never become "?x=" query params.
+ *  Keeps `false` and `0` so explicit boolean/numeric filters are sent. */
 export function cleanQuery(obj = {}) {
   const out = {};
   Object.entries(obj).forEach(([k, v]) => {
-    if (v === undefined || v === null || v === '' || v === false) return;
+    if (v === undefined || v === null || v === '') return;
     out[k] = v;
   });
   return out;

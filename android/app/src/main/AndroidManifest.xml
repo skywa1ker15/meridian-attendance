@@ -69,6 +69,12 @@
               2) The https(/http) links in the emails themselves. autoVerify="false" with a wildcard host:
                  Android cannot verify every self-hosted server, so the app is offered in the chooser.
                  The host wildcard is needed for the path prefixes to be honoured at all.
+
+                 SECURITY NOTE: host="*" means any website matching /app/invite or /app/reset can
+                 trigger the app. This is intentional because the server address is user-configurable.
+                 The invitation/reset tokens are always validated server-side, so a malicious link only
+                 results in a "link invalid" message. The app also derives the server address from the
+                 link domain and asks the user to confirm before connecting to an unknown server.
             -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />

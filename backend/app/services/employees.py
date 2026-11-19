@@ -18,7 +18,7 @@ from app.core.security import (
     hash_password,
     validate_password_policy,
 )
-from app.core.validation import normalise_sa_phone
+from app.core.validation import escape_like, normalise_sa_phone
 from app.models import (
     AttendanceEvent,
     AttendanceSession,
@@ -80,7 +80,7 @@ def _check_unique(db: Session, *, employee_number: str | None, email: str | None
 def list_employees(db: Session, params: PageParams, *, search: str | None, department_id: str | None, status: str | None, role: str | None) -> tuple[list[dict[str, Any]], int]:
     stmt = select(User).options(selectinload(User.department)).where(User.erased_at.is_(None))
     if search:
-        like = f"%{search.strip()}%"
+        like = f"%{escape_like(search.strip())}%"
         stmt = stmt.where(or_(User.first_name.ilike(like), User.last_name.ilike(like), User.email.ilike(like), User.employee_number.ilike(like), func.concat(User.first_name, " ", User.last_name).ilike(like)))
     if department_id:
         did = attendance.parse_uuid(department_id)
@@ -320,16 +320,19 @@ def employee_detail(db: Session, ref: str) -> dict[str, Any]:
     }
 
 
+_EXPORT_LIMIT = 50_000  # Safety cap per table to prevent OOM on small instances.
+
+
 def export_employee(db: Session, actor: User, ref: str, request: Request | None) -> dict[str, Any]:
     """POPIA access request: everything stored about the employee."""
     user = get_user(db, ref)
-    sessions = db.execute(select(AttendanceSession).options(selectinload(AttendanceSession.workplace)).where(AttendanceSession.user_id == user.id).order_by(AttendanceSession.work_date)).scalars().all()
-    events = db.execute(select(AttendanceEvent).options(selectinload(AttendanceEvent.workplace)).where(AttendanceEvent.user_id == user.id).order_by(AttendanceEvent.received_at)).scalars().all()
-    requests_ = db.execute(select(ManualRequest).options(selectinload(ManualRequest.user)).where(ManualRequest.user_id == user.id).order_by(ManualRequest.created_at)).scalars().all()
-    notes = db.execute(select(Notification).where(Notification.user_id == user.id).order_by(Notification.created_at)).scalars().all()
+    sessions = db.execute(select(AttendanceSession).options(selectinload(AttendanceSession.workplace)).where(AttendanceSession.user_id == user.id).order_by(AttendanceSession.work_date).limit(_EXPORT_LIMIT)).scalars().all()
+    events = db.execute(select(AttendanceEvent).options(selectinload(AttendanceEvent.workplace)).where(AttendanceEvent.user_id == user.id).order_by(AttendanceEvent.received_at).limit(_EXPORT_LIMIT)).scalars().all()
+    requests_ = db.execute(select(ManualRequest).options(selectinload(ManualRequest.user)).where(ManualRequest.user_id == user.id).order_by(ManualRequest.created_at).limit(_EXPORT_LIMIT)).scalars().all()
+    notes = db.execute(select(Notification).where(Notification.user_id == user.id).order_by(Notification.created_at).limit(_EXPORT_LIMIT)).scalars().all()
     devices = db.execute(select(Device).where(Device.user_id == user.id)).scalars().all()
-    logins = db.execute(select(RefreshToken).where(RefreshToken.user_id == user.id).order_by(RefreshToken.issued_at)).scalars().all()
-    audits = db.execute(select(AuditLog).options(selectinload(AuditLog.actor)).where(or_(AuditLog.entity_id == str(user.id), AuditLog.actor_user_id == user.id)).order_by(AuditLog.created_at)).scalars().all()
+    logins = db.execute(select(RefreshToken).where(RefreshToken.user_id == user.id).order_by(RefreshToken.issued_at).limit(_EXPORT_LIMIT)).scalars().all()
+    audits = db.execute(select(AuditLog).options(selectinload(AuditLog.actor)).where(or_(AuditLog.entity_id == str(user.id), AuditLog.actor_user_id == user.id)).order_by(AuditLog.created_at).limit(_EXPORT_LIMIT)).scalars().all()
     audit.record(db, action="employee.export", actor=actor, entity_type="user", entity_id=user.id, request=request)
     db.commit()
     from app.schemas.admin import (

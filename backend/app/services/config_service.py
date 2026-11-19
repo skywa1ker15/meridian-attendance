@@ -59,7 +59,17 @@ def get_workplace(db: Session, workplace_id: str | uuid.UUID) -> Workplace:
     return wp
 
 
+def _validate_coordinates(data) -> None:
+    """Reject coordinates_confirmed=True when the coordinates are at null island (0,0)."""
+    lat = getattr(data, "latitude", None)
+    lng = getattr(data, "longitude", None)
+    confirmed = getattr(data, "coordinates_confirmed", None)
+    if confirmed and lat is not None and lng is not None and abs(lat) < 0.001 and abs(lng) < 0.001:
+        raise ApiError(422, "validation_error", "Cannot confirm coordinates at (0, 0). Set the real workplace location first.", {"fields": {"coordinates_confirmed": "null_island"}})
+
+
 def create_workplace(db: Session, actor: User, data: WorkplaceIn, request=None) -> Workplace:
+    _validate_coordinates(data)
     wp = Workplace(**data.model_dump())
     db.add(wp)
     db.flush()
@@ -74,6 +84,7 @@ def update_workplace(db: Session, actor: User, workplace_id: str, data: Workplac
     changes: dict[str, Any] = data.model_dump(exclude_unset=True)
     for key, value in changes.items():
         setattr(wp, key, value)
+    _validate_coordinates(wp)
     wp.config_version = (wp.config_version or 1) + 1
     db.flush()
     audit.record(db, action="workplace.update", actor=actor, entity_type="workplace", entity_id=wp.id, before={k: before.get(k) for k in changes}, after=changes, request=request)

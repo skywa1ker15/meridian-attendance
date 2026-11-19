@@ -80,6 +80,35 @@ class VerificationTest {
     }
 
     @Test
+    fun departureOutsideGeofenceIsNotReview() {
+        val farAway = LocationSample(-29.74, 31.10, 10.0, 0L)
+        val v = Verification.evaluate(umhlanga, DetectionSignals(farAway, null, null, null), isDeparture = true)
+        assertEquals(false, v.insideGeofence)
+        // Departure outside is EXPECTED — should NOT be flagged for review
+        assertFalse(v.likelyUnderReview)
+        assertTrue("departure_still_inside" !in v.notes)
+    }
+
+    @Test
+    fun departureStillInsideIsFlaggedForReview() {
+        val inside = LocationSample(-29.7262, 31.0857, 18.0, 0L)
+        val v = Verification.evaluate(umhlanga, DetectionSignals(inside, null, null, null), isDeparture = true)
+        assertEquals(true, v.insideGeofence)
+        // Departure while still inside the geofence → review
+        assertTrue(v.likelyUnderReview)
+        assertTrue("departure_still_inside" in v.notes)
+    }
+
+    @Test
+    fun departureDoesNotRequireWifi() {
+        val wp = umhlanga.copy(wifiRequired = true)
+        val farAway = LocationSample(-29.74, 31.10, 10.0, 0L)
+        val v = Verification.evaluate(wp, DetectionSignals(farAway, null, null, null), isDeparture = true)
+        // Even with wifiRequired, departure is not flagged just because wifi doesn't match
+        assertFalse(v.likelyUnderReview)
+    }
+
+    @Test
     fun ssidAndBssidNormalisation() {
         assertNull(Verification.normaliseSsid("<unknown ssid>"))
         assertNull(Verification.normaliseSsid("  "))

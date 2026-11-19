@@ -71,7 +71,7 @@ class AdminRepository(
         caller.call { api.adminEvents(status?.ifBlank { null }, from, to, employeeId?.ifBlank { null }, eventType?.ifBlank { null }, page, 30) }
 
     suspend fun approve(id: String, note: String): ApiResult<EventDto> =
-        caller.call { api.adminApproveEventOptionalNote(id, OptionalNoteRequestDto(note.trim().ifBlank { null })) }
+        caller.call { api.adminApproveEvent(id, OptionalNoteRequestDto(note.trim().ifBlank { null })) }
 
     suspend fun reject(id: String, note: String): ApiResult<EventDto> = caller.call { api.adminRejectEvent(id, ReviewNoteRequestDto(note.trim())) }
 

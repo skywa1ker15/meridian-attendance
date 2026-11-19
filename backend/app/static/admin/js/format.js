@@ -125,14 +125,22 @@ export const DATE_PRESETS = [
   { key: 'last_30', label: 'Last 30 days', range: () => { const t = todayLocal(); return [addDays(t, -29), t]; } },
 ];
 
-/** Convert a datetime-local input value (interpreted in Africa/Johannesburg) to UTC ISO. */
+/** Convert a datetime-local input value (interpreted in Africa/Johannesburg) to UTC ISO.
+ *  Uses Intl to resolve the timezone offset for the given date, so it handles any
+ *  future DST changes without a hardcoded offset. */
 export function localInputToUtcIso(value) {
   if (!value) return null;
-  // value: YYYY-MM-DDTHH:MM ; SAST is UTC+2 all year (no DST).
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
   if (!m) return null;
   const [, y, mo, d, h, mi] = m.map(Number);
-  const utc = Date.UTC(y, mo - 1, d, h - 2, mi);
+  // Build a Date in UTC, then ask Intl what the wall-clock hour is in the target TZ.
+  // The difference between the UTC hour and the TZ hour gives the offset.
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(guess));
+  const get = (t) => Number(parts.find((p) => p.type === t).value);
+  const tzH = get('hour') === 24 ? 0 : get('hour');
+  const offsetMs = ((tzH - h) * 60 + (get('minute') - mi)) * 60000;
+  const utc = guess - offsetMs;
   return new Date(utc).toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 

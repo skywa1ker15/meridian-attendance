@@ -26,6 +26,16 @@ else
   echo "entrypoint: SKIP_MIGRATIONS=1 — not running migrations"
 fi
 
+# When a trusted reverse proxy (Caddy/nginx) sets X-Forwarded-For, gunicorn must be
+# told which source IPs to trust. In Docker the proxy's IP is the container bridge
+# address (not 127.0.0.1), so when TRUST_PROXY_HEADERS is true we default to "*"
+# (trust any private/bridge IP). Override with FORWARDED_ALLOW_IPS if needed.
+if [ "${TRUST_PROXY_HEADERS:-false}" = "true" ]; then
+  _FWD_IPS="${FORWARDED_ALLOW_IPS:-*}"
+else
+  _FWD_IPS="${FORWARDED_ALLOW_IPS:-127.0.0.1}"
+fi
+
 exec gunicorn app.main:app \
   --worker-class uvicorn.workers.UvicornWorker \
   --workers "${WEB_CONCURRENCY:-2}" \
@@ -34,6 +44,6 @@ exec gunicorn app.main:app \
   --timeout "${GUNICORN_TIMEOUT:-60}" \
   --graceful-timeout 30 \
   --keep-alive 5 \
-  --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-127.0.0.1}" \
+  --forwarded-allow-ips "$_FWD_IPS" \
   --access-logfile - \
   --error-logfile -

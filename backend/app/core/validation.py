@@ -63,3 +63,8 @@ def normalise_sa_phone(value: str | None, *, field: str = "phone") -> str | None
 
 def _invalid(field: str) -> ApiError:
     return ApiError(422, "validation_error", PHONE_HELP, {"fields": {field: "invalid_phone"}})
+
+
+def escape_like(term: str) -> str:
+    """Escape SQL LIKE wildcards ``%`` and ``_`` in a user-supplied search term."""
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

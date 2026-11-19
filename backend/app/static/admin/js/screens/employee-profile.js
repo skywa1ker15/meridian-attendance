@@ -5,7 +5,7 @@ import { session } from '../session.js';
 import { el, replace, button, card, statTile, statusChip, kv, dataTable, confirmDialog, openModal, field, input, select, formError, showFormError, setBusy, toast, handleError, skeleton, errorState } from '../ui.js';
 import { fullName, initials, titleCase, fmtDateTime, fmtMinutes, fmtRelative, fmtWorkDate, statusLabel } from '../format.js';
 import { getDepartments, assignableRoles } from '../data.js';
-import { resetPassword } from './employees.js';
+import { resetPassword, sendInvitation } from './employees.js';
 
 export function render(container, { params, setTitle, navigate, user: me }) {
   const id = params.id;
@@ -30,10 +30,12 @@ export function render(container, { params, setTitle, navigate, user: me }) {
 
     const isSelf = me && me.id === u.id;
     const targetIsSuper = u.role === 'superadmin';
+    const neverLoggedIn = !u.last_login_at;
     const headActions = [
       button('Back', { kind: 'secondary', size: 'sm', icon: 'arrowLeft', onClick: () => navigate('/employees') }),
       canWrite ? button('Edit details', { kind: 'secondary', size: 'sm', icon: 'edit', onClick: () => openEdit(u, load), attrs: { 'data-testid': 'emp-edit' } }) : null,
-      canWrite && u.status === 'active' ? button('Reset password', { kind: 'secondary', size: 'sm', icon: 'key', onClick: () => resetPassword(u) }) : null,
+      canWrite && u.status === 'active' && neverLoggedIn ? button('Send invitation', { size: 'sm', icon: 'send', onClick: () => sendInvitation(u, load), attrs: { 'data-testid': 'emp-invite' } }) : null,
+      canWrite && u.status === 'active' && !neverLoggedIn ? button('Reset password', { kind: 'secondary', size: 'sm', icon: 'key', onClick: () => resetPassword(u) }) : null,
       canRoles && !isSelf && (!targetIsSuper || canSuper) ? button('Change role', { kind: 'secondary', size: 'sm', icon: 'roles', onClick: () => openRole(u, load), attrs: { 'data-testid': 'emp-role' } }) : null,
       canWrite && !isSelf && u.status === 'active' ? button('Deactivate', { kind: 'danger', size: 'sm', onClick: () => deactivate(u, load), attrs: { 'data-testid': 'emp-deactivate' } }) : null,
       canWrite && u.status === 'inactive' ? button('Reactivate', { kind: 'success', size: 'sm', onClick: () => reactivate(u, load), attrs: { 'data-testid': 'emp-reactivate' } }) : null,
@@ -48,7 +50,8 @@ export function render(container, { params, setTitle, navigate, user: me }) {
           el('span', { class: 'mono' }, u.employee_number || '—'),
           el('span', { class: `chip ${u.role === 'employee' ? 'grey' : 'blue'}` }, titleCase(u.role)),
           statusChip(u.status),
-          u.must_change_password ? el('span', { class: 'chip orange' }, 'Must change password') : null)),
+          neverLoggedIn ? el('span', { class: 'chip orange' }, 'Invitation pending') : null,
+          !neverLoggedIn && u.must_change_password ? el('span', { class: 'chip orange' }, 'Must change password') : null)),
       el('div', { class: 'page-actions', style: { marginLeft: 'auto' } }, headActions));
 
     const details = card('Details', el('div', {},

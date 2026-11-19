@@ -17,6 +17,9 @@
 	admin 127.0.0.1:2019
 	servers {
 		# Pass the real client IP to the API (TRUST_PROXY_HEADERS=true on the API side).
+		# Using private_ranges because Caddy talks to the API over the Docker bridge
+		# network (172.x.x.x). On a shared network, tighten this to the specific
+		# Docker network CIDR (e.g. 172.18.0.0/16).
 		trusted_proxies static private_ranges
 	}
 }
@@ -46,9 +49,11 @@
 	}
 	respond @metrics_denied 403
 
-	# --- Interactive API docs are useful on staging. On production, uncomment to hide them:
-	# @docs path /api/docs /api/redoc /api/openapi.json
-	# respond @docs 404
+	# --- NOTE: The backend rate limiter is per-process (in-memory). With multiple
+	#     gunicorn workers, each worker counts separately. For production, consider
+	#     adding a Caddy rate-limit plugin (caddy-ratelimit) or an nginx rate limit
+	#     in front of the API for authoritative brute-force protection on:
+	#       /api/v1/auth/login, /api/v1/auth/password/forgot, /api/v1/setup/first-admin
 
 	# --- Request size limit (attendance payloads and sync batches are small).
 	request_body {

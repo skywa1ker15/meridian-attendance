@@ -34,7 +34,7 @@ class BaseUrlHolder(initialRoot: String) {
 
     /** Maps a placeholder URL (`https://meridian.invalid/api/v1/…`) onto the current base; other URLs are untouched. */
     fun rewrite(url: HttpUrl): HttpUrl {
-        if (url.host != PLACEHOLDER_HOST) return url
+        if (!url.host.equals(PLACEHOLDER_HOST, ignoreCase = true)) return url
         val relative = url.encodedPath.removePrefix("/" + ServerUrls.API_PATH).removePrefix("/")
         val query = url.encodedQuery?.let { "?$it" } ?: ""
         return apiBase.resolve(relative + query) ?: url

@@ -163,6 +163,13 @@ interface OutboxDao {
     @Query("DELETE FROM pending_outbox WHERE dead = 1")
     suspend fun clearDead()
 
+    @Query("SELECT COUNT(*) FROM pending_outbox")
+    suspend fun totalCount(): Int
+
+    /** Delete the oldest dead rows, then the oldest live rows, to bring total under [limit]. */
+    @Query("DELETE FROM pending_outbox WHERE id IN (SELECT id FROM pending_outbox ORDER BY dead DESC, created_at ASC LIMIT :excess)")
+    suspend fun trimOldest(excess: Int)
+
     @Query("DELETE FROM pending_outbox")
     suspend fun clear()
 }

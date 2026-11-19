@@ -75,7 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         scheduler.stop()
 
-    docs_enabled = True
+    docs_enabled = settings.app_env not in ("production", "staging")
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -152,14 +152,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
             return FileResponse(base / "index.html", headers={"Cache-Control": "no-cache"})
 
+    # --- robots.txt (prevent search engines indexing the API / dashboard) -----------------
+    _ROBOTS_TXT = "User-agent: *\nDisallow: /\n"
+
+    @app.get("/robots.txt", include_in_schema=False)
+    def robots_txt():
+        return Response(_ROBOTS_TXT, media_type="text/plain")
+
     # --- deep links (invitation / password reset emails) ---------------------------------
+    _DEEPLINK_CSP = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+
     @app.get("/app/invite", include_in_schema=False)
     def app_invite(token: str = ""):
-        return HTMLResponse(deeplinks.invite_page(token, settings), headers={"Cache-Control": "no-store"})
+        return HTMLResponse(deeplinks.invite_page(token, settings), headers={"Cache-Control": "no-store", "Content-Security-Policy": _DEEPLINK_CSP})
 
     @app.get("/app/reset", include_in_schema=False)
     def app_reset(token: str = ""):
-        return HTMLResponse(deeplinks.reset_page(token, settings), headers={"Cache-Control": "no-store"})
+        return HTMLResponse(deeplinks.reset_page(token, settings), headers={"Cache-Control": "no-store", "Content-Security-Policy": _DEEPLINK_CSP})
 
     @app.get("/.well-known/assetlinks.json", include_in_schema=False)
     def asset_links():

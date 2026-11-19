@@ -22,6 +22,7 @@ from app.api.deps import (
 from app.core import permissions as P
 from app.core import timeutil
 from app.core.errors import ApiError
+from app.core.validation import escape_like
 from app.models import AuditLog, User
 from app.schemas.admin import (
     BroadcastIn,
@@ -412,7 +413,7 @@ def audit_logs(
     if date_to:
         stmt = stmt.where(AuditLog.created_at < timeutil.local_day_bounds_utc(date_to)[1])
     if search:
-        like = f"%{search.strip()}%"
+        like = f"%{escape_like(search.strip())}%"
         stmt = stmt.outerjoin(User, User.id == AuditLog.actor_user_id).where((AuditLog.action.ilike(like)) | (AuditLog.entity_id.ilike(like)) | (User.first_name.ilike(like)) | (User.last_name.ilike(like)) | (User.employee_number.ilike(like)))
     total = db.execute(select(func.count()).select_from(stmt.order_by(None).subquery())).scalar_one()
     rows = db.execute(stmt.order_by(AuditLog.created_at.desc()).offset(params.offset).limit(params.page_size)).scalars().all()

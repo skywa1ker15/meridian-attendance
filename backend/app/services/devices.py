@@ -11,6 +11,7 @@ from starlette.requests import Request
 from app.core import timeutil
 from app.core.config import get_settings
 from app.core.errors import ApiError
+from app.core.validation import escape_like
 from app.models import AttendancePolicy, Device, RefreshToken, User
 from app.schemas.auth import DeviceIn, device_dict
 from app.schemas.common import PageParams
@@ -167,7 +168,7 @@ def list_devices(db: Session, params: PageParams, status: str | None, user_id: s
         except ValueError:
             return [], 0
     if search:
-        like = f"%{search.strip()}%"
+        like = f"%{escape_like(search.strip())}%"
         stmt = stmt.where(or_(User.first_name.ilike(like), User.last_name.ilike(like), User.employee_number.ilike(like), Device.model.ilike(like), Device.device_id.ilike(like)))
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     rows = db.execute(stmt.order_by(Device.registered_at.desc()).offset(params.offset).limit(params.page_size)).scalars().all()

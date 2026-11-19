@@ -89,7 +89,7 @@ class GeofenceTransitionWorker(context: Context, params: WorkerParameters) : Cor
         val graph = (applicationContext as MeridianApplication).graph
         val workplace = graph.configRepository.workplace(workplaceId) ?: return
         val signals = graph.signalCollector.collect(fallback)
-        val verdict = Verification.evaluate(workplace.toGeometry(), signals)
+        val verdict = Verification.evaluate(workplace.toGeometry(), signals, isDeparture = type == EventType.DEPARTURE)
         val event = graph.attendanceRepository.recordDetection(workplace, type, transition, signals, verdict, detectedAt)
         if (event.status == "pending") {
             graph.notifier.showConfirmationRequired(event)

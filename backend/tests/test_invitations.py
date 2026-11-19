@@ -197,11 +197,12 @@ def test_accept_for_a_deactivated_account_fails(client, admin_tokens, db, mail):
 
 # --- login before / after activation -----------------------------------------
 def test_login_before_activation_reports_invitation_pending(client, admin_tokens, mail):
+    """Unactivated employee gets the same generic error as an unknown user (prevents account enumeration)."""
     created = create_employee(client, admin_tokens)
     r = client.post("/api/v1/auth/login", json={"identifier": created["user"]["email"], "password": PASSWORD})
     assert r.status_code == 401
-    assert r.json()["error"]["code"] == "invitation_pending"
-    assert "invitation link" in r.json()["error"]["message"]
+    # Same code as an unknown user — no information leakage about whether the account exists.
+    assert r.json()["error"]["code"] == "invalid_credentials"
 
 
 def test_login_works_after_activation(client, admin_tokens, mail):

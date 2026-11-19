@@ -32,21 +32,21 @@ ADVISORY_LOCK_KEY = 0x4D45524944494E01
 def run_once() -> dict[str, Any]:
     """Execute every maintenance job once and return counts.
 
-    A session-level Postgres advisory lock guarantees that only one process (of many
+    A transaction-level Postgres advisory lock guarantees that only one process (of many
     gunicorn workers / replicas / cron) runs the jobs at a time; others skip.
+    The lock is automatically released when the transaction ends, so it cannot be
+    held indefinitely if the process crashes (unlike session-level locks).
     """
     now = timeutil.now_utc()
     with get_engine().connect() as lock_conn:
-        acquired = bool(lock_conn.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": ADVISORY_LOCK_KEY}).scalar())
-        lock_conn.commit()
+        acquired = bool(lock_conn.execute(text("SELECT pg_try_advisory_xact_lock(:k)"), {"k": ADVISORY_LOCK_KEY}).scalar())
         if not acquired:
             log.info("scheduler run skipped: another process holds the lock")
+            lock_conn.rollback()
             return {"ran_at": timeutil.utc_iso(now), "skipped": "locked"}
-        try:
-            return _run_jobs(now)
-        finally:
-            lock_conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": ADVISORY_LOCK_KEY})
-            lock_conn.commit()
+        result = _run_jobs(now)
+        lock_conn.commit()  # releases the transaction-level advisory lock
+        return result
 
 
 def _run_jobs(now) -> dict[str, Any]:

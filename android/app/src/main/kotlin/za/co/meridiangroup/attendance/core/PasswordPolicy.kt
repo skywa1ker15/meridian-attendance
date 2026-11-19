@@ -33,7 +33,12 @@ object PasswordPolicy {
             Check(Rule.LENGTH, password.length >= MIN_LENGTH),
             Check(
                 Rule.NOT_IDENTIFIER,
-                password.isNotEmpty() && identifiers.none { it.isNotBlank() && lowered.contains(it.trim().lowercase()) },
+                // Only check identifiers ≥3 chars to avoid false positives from short first names
+                // like "Al" matching inside unrelated passwords. Mirrors the backend's minimum.
+                password.isNotEmpty() && identifiers.none { id ->
+                    val trimmed = id.trim().lowercase()
+                    trimmed.length >= 3 && lowered.contains(trimmed)
+                },
             ),
             Check(Rule.NOT_COMMON, password.isNotEmpty() && !looksCommon(lowered)),
         )

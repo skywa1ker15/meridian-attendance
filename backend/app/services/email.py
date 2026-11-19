@@ -29,6 +29,14 @@ from app.core.timeutil import now_utc
 
 log = logging.getLogger("meridian.email")
 
+
+def _mask_email(email: str) -> str:
+    """Mask an email address for logging: 'john.doe@example.com' → 'j***@example.com'."""
+    if "@" not in email:
+        return "***"
+    local, domain = email.rsplit("@", 1)
+    return f"{local[0]}***@{domain}" if local else f"***@{domain}"
+
 GRAPH_SCOPE = "https://graph.microsoft.com/.default"
 GRAPH_TOKEN_URL = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
 GRAPH_SENDMAIL_URL = "https://graph.microsoft.com/v1.0/users/{sender}/sendMail"
@@ -187,20 +195,20 @@ def _send_via_graph(settings: Settings, *, to: str, subject: str, text_body: str
             reset_token_cache()
             response = _post(_token_cache.get(settings))
         if response.status_code in (200, 202):
-            log.info("email sent via Graph to %s (%s)", to, subject)
+            log.info("email sent via Graph to %s (%s)", _mask_email(to), subject)
             return True
         retry_after = response.headers.get("retry-after")
         log.error(
             "Graph sendMail to %s failed: HTTP %s (%s)%s",
-            to, response.status_code, _error_code(response),
+            _mask_email(to), response.status_code, _error_code(response),
             f", retry after {retry_after}s" if retry_after else "",
         )
         return False
     except GraphError as exc:
-        log.error("Graph email to %s not sent: %s", to, exc)
+        log.error("Graph email to %s not sent: %s", _mask_email(to), exc)
         return False
     except httpx.HTTPError as exc:
-        log.error("Graph email to %s not sent: %s", to, type(exc).__name__)
+        log.error("Graph email to %s not sent: %s", _mask_email(to), type(exc).__name__)
         return False
 
 
@@ -215,10 +223,10 @@ def _send_via_smtp(settings: Settings, *, to: str, subject: str, text_body: str,
             if settings.smtp_username:
                 server.login(settings.smtp_username, settings.smtp_password or "")
             server.send_message(msg)
-        log.info("email sent via SMTP to %s (%s)", to, subject)
+        log.info("email sent via SMTP to %s (%s)", _mask_email(to), subject)
         return True
     except Exception:  # pragma: no cover - depends on external server
-        log.exception("failed to send email to %s via SMTP", to)
+        log.exception("failed to send email to %s via SMTP", _mask_email(to))
         return False
 
 
@@ -228,7 +236,7 @@ def send_email(*, to: str, subject: str, text_body: str, html_body: str | None =
     settings = get_settings()
     provider = active_provider(settings)
     if provider == "none":
-        log.info("email not configured; message to %s with subject %r not sent", to, subject)
+        log.info("email not configured; message to %s with subject %r not sent", _mask_email(to), subject)
         return False
     html = html_body or _html_from_text(text_body)
     if provider == "graph":
@@ -236,8 +244,16 @@ def send_email(*, to: str, subject: str, text_body: str, html_body: str | None =
     return _send_via_smtp(settings, to=to, subject=subject, text_body=text_body, html_body=html)
 
 
+def _mask_email(addr: str) -> str:
+    """Mask an email address for logs: ``j***@domain.co.za``."""
+    at = addr.find("@")
+    if at <= 0:
+        return "***"
+    return addr[0] + "***" + addr[at:]
+
+
 def _escape(value: str) -> str:
-    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#39;").replace('"', "&quot;").replace("'", "&#39;")
 
 
 def _html_from_text(text_body: str) -> str:

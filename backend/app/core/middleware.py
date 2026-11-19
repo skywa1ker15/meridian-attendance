@@ -100,8 +100,15 @@ class _SlidingWindow:
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Per-client-IP sliding-window limits. In-memory (per process) — put Caddy/nginx
-    limits in front for multi-instance deployments (see deploy/README.md)."""
+    """Per-client-IP sliding-window limits.
+
+    IMPORTANT: this store is in-memory and per-process. With ``WEB_CONCURRENCY=N``
+    each gunicorn worker maintains its own window, so an attacker effectively gets
+    ``N × limit`` attempts before being blocked. For production deployments the
+    Caddyfile (see ``deploy/Caddyfile``) adds an upstream ``rate_limit`` directive on
+    the login endpoint that is shared across all workers; this middleware is defence
+    in depth. See also ``deploy/README.md``.
+    """
 
     def __init__(self, app, settings: Settings):
         super().__init__(app)

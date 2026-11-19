@@ -45,9 +45,10 @@ services:
           type: web
           name: meridian-api
           property: host
-        # NOTE: this resolves to the bare host. After the first deploy, edit this
-        # variable in the dashboard to the full https:// URL so password-reset links
-        # are correct. docs/HOSTING.md step 5 covers it.
+        # NOTE: this resolves to a bare hostname (e.g. "meridian-api.onrender.com").
+        # The backend auto-prefixes "https://" for bare hostnames, so links work
+        # out of the box. If you later add a custom domain, update this variable in
+        # the Render dashboard to the full URL (e.g. "https://attendance.meridiangroup.co.za").
       - key: SCHEDULER_ENABLED
         value: "true"
       - key: LOG_JSON
