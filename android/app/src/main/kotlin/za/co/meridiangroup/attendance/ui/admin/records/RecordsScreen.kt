@@ -168,17 +168,23 @@ fun RecordsScreen(viewModel: RecordsViewModel, repo: AdminRepository, permission
         }
         items(state.paged.items, key = { it.id }) { session ->
             GlassCard(onClick = { onOpenSession(session.id) }, contentPadding = PaddingValues(Spacing.m)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
                         Text(session.employee?.fullName ?: JohannesburgTime.workDate(session.workDate), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "${JohannesburgTime.workDate(session.workDate)} · ${session.clockInLocal ?: "—"}–${session.clockOutLocal ?: "—"} · ${WorkedTime.format(session.workedMinutes)}",
+                            JohannesburgTime.workDate(session.workDate),
+                            style = MaterialTheme.typography.bodySmall, color = MeridianTheme.extended.mutedText,
+                        )
+                        Text(
+                            "${session.clockInLocal ?: "—"} – ${session.clockOutLocal ?: "—"}  ·  ${WorkedTime.format(session.workedMinutes)}",
                             style = MaterialTheme.typography.bodySmall, color = MeridianTheme.extended.mutedText,
                         )
                     }
-                    if (session.isLate) StatusChip("late", label = stringResource(R.string.status_late))
-                    if (session.corrected) StatusChip("corrected", label = stringResource(R.string.records_corrected))
-                    StatusChip(session.status)
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        StatusChip(session.status)
+                        if (session.isLate) StatusChip("late", label = stringResource(R.string.status_late))
+                        if (session.corrected) StatusChip("corrected", label = stringResource(R.string.records_corrected))
+                    }
                 }
             }
         }

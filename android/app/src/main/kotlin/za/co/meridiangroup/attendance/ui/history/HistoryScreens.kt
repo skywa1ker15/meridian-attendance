@@ -59,16 +59,16 @@ fun HistoryScreen(viewModel: HistoryViewModel, onOpenSession: (String) -> Unit, 
     LazyColumn(Modifier.fillMaxSize().testTag("history"), contentPadding = PaddingValues(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         item { Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineSmall) }
         item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                items(HistoryRange.entries) { r ->
-                    FilterChip(selected = state.range == r, onClick = { viewModel.setRange(r) }, label = { Text(rangeLabel(r)) })
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    items(HistoryRange.entries) { r ->
+                        FilterChip(selected = state.range == r, onClick = { viewModel.setRange(r) }, label = { Text(rangeLabel(r)) })
+                    }
                 }
-            }
-        }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                items(HistoryStatusFilter.entries) { f ->
-                    FilterChip(selected = state.filter == f, onClick = { viewModel.setFilter(f) }, label = { Text(filterLabel(f)) })
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    items(HistoryStatusFilter.entries) { f ->
+                        FilterChip(selected = state.filter == f, onClick = { viewModel.setFilter(f) }, label = { Text(filterLabel(f)) })
+                    }
                 }
             }
         }

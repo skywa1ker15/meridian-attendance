@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import za.co.meridiangroup.attendance.core.ApiResult
+import za.co.meridiangroup.attendance.core.PasswordPolicy
 import za.co.meridiangroup.attendance.core.Validation
 import za.co.meridiangroup.attendance.data.repository.AuthRepository
 
@@ -114,21 +115,29 @@ data class ChangePasswordUiState(
     val error: String? = null,
     val saving: Boolean = false,
     val done: Boolean = false,
-)
+    private val _identifier: String? = null,
+) {
+    val checklist: List<PasswordPolicy.Check>
+        get() = PasswordPolicy.check(new, listOfNotNull(_identifier), confirm)
+}
 
 class ChangePasswordViewModel(private val auth: AuthRepository, private val identifier: () -> String?) : ViewModel() {
     private val _state = MutableStateFlow(ChangePasswordUiState())
     val state: StateFlow<ChangePasswordUiState> = _state.asStateFlow()
 
+    init {
+        // Populate identifier for password-contains-identifier check
+        identifier()?.let { id -> _state.update { it.copy(_identifier = id) } }
+    }
+
     fun onCurrent(v: String) = _state.update { it.copy(current = v, error = null) }
-    fun onNew(v: String) = _state.update { it.copy(new = v, issues = emptyList(), error = null) }
-    fun onConfirm(v: String) = _state.update { it.copy(confirm = v, issues = emptyList(), error = null) }
+    fun onNew(v: String) = _state.update { it.copy(new = v, error = null) }
+    fun onConfirm(v: String) = _state.update { it.copy(confirm = v, error = null) }
 
     fun submit() {
         val s = _state.value
         if (s.current.isEmpty()) { _state.update { it.copy(error = "Enter your current (temporary) password.") }; return }
-        val issues = Validation.newPassword(s.new, identifier(), s.confirm)
-        if (issues.isNotEmpty()) { _state.update { it.copy(issues = issues) }; return }
+        if (!s.checklist.all { it.satisfied }) return  // checklist shows what's wrong
         _state.update { it.copy(saving = true) }
         viewModelScope.launch {
             val r = auth.changePassword(s.current, s.new)

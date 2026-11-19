@@ -179,7 +179,7 @@ fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, on
         state.createError?.let { item { AdminMessage(it, viewModel::clearMessage) } }
         items(state.paged.items, key = { it.id }) { user ->
             GlassCard(onClick = { onOpenEmployee(user.id) }, contentPadding = PaddingValues(Spacing.m)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.Top) {
                     Column(Modifier.weight(1f)) {
                         Text(user.fullName, style = MaterialTheme.typography.titleSmall)
                         Text(
@@ -187,8 +187,10 @@ fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, on
                             style = MaterialTheme.typography.bodySmall, color = MeridianTheme.extended.mutedText,
                         )
                     }
-                    if (user.status != "active") StatusChip(user.status)
-                    user.lastAttendanceStatus?.let { StatusChip(it) }
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        if (user.status != "active") StatusChip(user.status)
+                        user.lastAttendanceStatus?.let { StatusChip(it) }
+                    }
                 }
             }
         }

@@ -106,31 +106,41 @@ fun LiveAttendanceScreen(viewModel: LiveAttendanceViewModel) {
                         )
                     }
                     item {
-                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             StatTile(stringResource(R.string.today_clocked_in), (counts[TodayStatus.CLOCKED_IN] ?: 0).toString(), Modifier.weight(1f), Icons.Outlined.Groups)
                             StatTile(
                                 stringResource(R.string.admin_pending),
                                 ((counts[TodayStatus.PENDING_ARRIVAL] ?: 0) + (counts[TodayStatus.PENDING_DEPARTURE] ?: 0)).toString(),
                                 Modifier.weight(1f),
                             )
+                        }
+                    }
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             StatTile(stringResource(R.string.today_not_started), (counts[TodayStatus.NOT_STARTED] ?: 0).toString(), Modifier.weight(1f))
+                            StatTile(stringResource(R.string.manage_total), items.size.toString(), Modifier.weight(1f))
                         }
                     }
                     if (items.isEmpty()) item { EmptyState(stringResource(R.string.admin_live_empty_title), stringResource(R.string.admin_live_empty_body)) }
                     items(items, key = { it.employee.id }) { row ->
                         val st = TodayStatus.fromWire(row.status)
                         GlassCard(contentPadding = PaddingValues(Spacing.m)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.Top) {
                                 Column(Modifier.weight(1f)) {
                                     Text(row.employee.fullName, style = MaterialTheme.typography.titleSmall)
                                     Text(
-                                        listOfNotNull(row.employee.employeeNumber, row.employee.department?.name).joinToString(" · ") +
-                                            " · ${row.clockInLocal ?: "—"}–${row.clockOutLocal ?: "—"} · ${WorkedTime.format(row.workedMinutes)}",
+                                        listOfNotNull(row.employee.employeeNumber, row.employee.department?.name).joinToString(" · "),
+                                        style = MaterialTheme.typography.bodySmall, color = MeridianTheme.extended.mutedText,
+                                    )
+                                    Text(
+                                        "${row.clockInLocal ?: "—"} – ${row.clockOutLocal ?: "—"}  ·  ${WorkedTime.format(row.workedMinutes)}",
                                         style = MaterialTheme.typography.bodySmall, color = MeridianTheme.extended.mutedText,
                                     )
                                 }
-                                if (row.isLate) StatusChip("late", label = stringResource(R.string.status_late))
-                                StatusChip(st.wire, label = statusLabel(st), tone = StatusTones.forToday(st))
+                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                                    StatusChip(st.wire, label = statusLabel(st), tone = StatusTones.forToday(st))
+                                    if (row.isLate) StatusChip("late", label = stringResource(R.string.status_late))
+                                }
                             }
                         }
                     }

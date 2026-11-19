@@ -428,6 +428,7 @@
     <string name="employee_deactivate">Deactivate</string>
     <string name="employee_deactivate_body">The account is disabled and all devices and sessions are revoked. A reason is required.</string>
     <string name="employee_reactivate">Reactivate</string>
+    <string name="employee_popia_section">Data &amp; privacy (%1$s)</string>
     <string name="employee_export">Export personal data</string>
     <string name="employee_erase">Erase personal data</string>
     <string name="employee_erase_body">This pseudonymises %1$s\'s personal data after retention checks and cannot be undone. Type the employee number to confirm.</string>

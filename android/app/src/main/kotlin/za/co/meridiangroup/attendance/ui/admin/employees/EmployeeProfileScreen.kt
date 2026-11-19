@@ -4,8 +4,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -166,7 +166,6 @@ class EmployeeProfileViewModel(private val graph: AppGraph, private val employee
     val exports: ExportStore get() = graph.exportStore
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EmployeeProfileScreen(viewModel: EmployeeProfileViewModel, permissions: List<String>) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -227,31 +226,43 @@ fun EmployeeProfileScreen(viewModel: EmployeeProfileViewModel, permissions: List
                     item { SectionHeader(stringResource(R.string.employee_actions)) }
                     item {
                         GlassCard {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                                if (canWrite) PillButton(stringResource(R.string.employee_edit), { editing = true }, style = PillStyle.OUTLINE, enabled = !state.busy)
-                                if (canWrite) {
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                                if (canWrite) PillButton(stringResource(R.string.employee_edit), { editing = true }, Modifier.fillMaxWidth(), style = PillStyle.OUTLINE, enabled = !state.busy)
+                                if (canWrite && user.lastLoginAt == null) {
                                     PillButton(
                                         stringResource(R.string.employee_resend_invitation), viewModel::resendInvitation,
-                                        Modifier.testTag("employee_resend_invite"), style = PillStyle.OUTLINE, enabled = !state.busy,
+                                        Modifier.fillMaxWidth().testTag("employee_resend_invite"), style = PillStyle.PRIMARY, enabled = !state.busy,
                                     )
                                 }
-                                if (canWrite) PillButton(stringResource(R.string.employee_reset_password), viewModel::resetPassword, style = PillStyle.OUTLINE, enabled = !state.busy)
+                                if (canWrite && user.lastLoginAt != null) {
+                                    PillButton(stringResource(R.string.employee_reset_password), viewModel::resetPassword, Modifier.fillMaxWidth(), style = PillStyle.OUTLINE, enabled = !state.busy)
+                                }
+                                if (canRoles) {
+                                    AdminDropdown(
+                                        stringResource(R.string.profile_role),
+                                        ServerPermissions.assignableRoles(permissions).map { it to StatusTones.label(it) },
+                                        user.role, viewModel::changeRole, tag = "role_select",
+                                    )
+                                }
                                 if (canWrite) {
                                     if (user.status == "active") {
-                                        PillButton(stringResource(R.string.employee_deactivate), { deactivating = true }, style = PillStyle.DANGER, enabled = !state.busy)
+                                        PillButton(stringResource(R.string.employee_deactivate), { deactivating = true }, Modifier.fillMaxWidth(), style = PillStyle.DANGER, enabled = !state.busy)
                                     } else {
-                                        PillButton(stringResource(R.string.employee_reactivate), viewModel::reactivate, style = PillStyle.SUCCESS, enabled = !state.busy)
+                                        PillButton(stringResource(R.string.employee_reactivate), viewModel::reactivate, Modifier.fillMaxWidth(), style = PillStyle.SUCCESS, enabled = !state.busy)
                                     }
                                 }
-                                if (canWrite) PillButton(stringResource(R.string.employee_export), viewModel::exportData, style = PillStyle.GHOST, enabled = !state.busy)
-                                if (isSuperadmin) PillButton(stringResource(R.string.employee_erase), { erasing = true }, style = PillStyle.DANGER, enabled = !state.busy)
                             }
-                            if (canRoles) {
-                                AdminDropdown(
-                                    stringResource(R.string.profile_role),
-                                    ServerPermissions.assignableRoles(permissions).map { it to StatusTones.label(it) },
-                                    user.role, viewModel::changeRole, tag = "role_select",
-                                )
+                        }
+                    }
+                    // POPIA section — less prominent
+                    if (canWrite || isSuperadmin) {
+                        item {
+                            GlassCard {
+                                Text(stringResource(R.string.employee_popia_section, "POPIA"), style = MaterialTheme.typography.titleSmall)
+                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                                    if (canWrite) PillButton(stringResource(R.string.employee_export), viewModel::exportData, Modifier.fillMaxWidth(), style = PillStyle.GHOST, enabled = !state.busy)
+                                    if (isSuperadmin) PillButton(stringResource(R.string.employee_erase), { erasing = true }, Modifier.fillMaxWidth(), style = PillStyle.DANGER, enabled = !state.busy)
+                                }
                             }
                         }
                     }

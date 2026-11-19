@@ -23,6 +23,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -30,7 +33,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +45,7 @@ import kotlinx.coroutines.launch
 import za.co.meridiangroup.attendance.AppGraph
 import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.ApiResult
+import za.co.meridiangroup.attendance.core.PasswordPolicy
 import za.co.meridiangroup.attendance.core.StatusTone
 import za.co.meridiangroup.attendance.core.Validation
 import za.co.meridiangroup.attendance.data.remote.dto.FirstAdminRequestDto
@@ -68,7 +71,14 @@ data class SetupUiState(
     /** Set on 409 setup_complete: the caller returns to the login screen with this message. */
     val closed: String? = null,
     val done: Boolean = false,
-)
+) {
+    val checklist: List<PasswordPolicy.Check>
+        get() = PasswordPolicy.check(
+            password,
+            listOf(employeeNumber, email, firstName, lastName).filter { it.isNotBlank() },
+            confirm,
+        )
+}
 
 /**
  * docs/API.md §0 — creates the first administrator on a brand-new installation and signs them in.
@@ -97,9 +107,9 @@ class SetupViewModel(private val graph: AppGraph, setupCodeRequired: Boolean) : 
         if (s.firstName.isBlank()) errors["first_name"] = "Enter your first name."
         if (s.lastName.isBlank()) errors["last_name"] = "Enter your last name."
         if (Validation.identifier(s.email) != null || !s.email.contains('@')) errors["email"] = "Enter a valid email address."
-        val issues = Validation.newPassword(s.password, s.email.ifBlank { s.employeeNumber }, s.confirm)
-        if (errors.isNotEmpty() || issues.isNotEmpty()) {
-            _state.update { it.copy(fieldErrors = errors, issues = issues) }
+        val passwordOk = s.checklist.all { it.satisfied }
+        if (errors.isNotEmpty() || !passwordOk) {
+            _state.update { it.copy(fieldErrors = errors) }
             return
         }
         _state.update { it.copy(saving = true, formError = null) }
@@ -142,6 +152,7 @@ class SetupViewModel(private val graph: AppGraph, setupCodeRequired: Boolean) : 
 @Composable
 fun SetupScreen(viewModel: SetupViewModel, onBackToLogin: (String?) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var showPassword by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.closed) { state.closed?.let(onBackToLogin) }
 
     Box(
@@ -172,11 +183,18 @@ fun SetupScreen(viewModel: SetupViewModel, onBackToLogin: (String?) -> Unit) {
                 SetupField(state.lastName, viewModel::onLastName, stringResource(R.string.setup_last_name), "setup_last", error = state.fieldErrors["last_name"])
                 SetupField(state.email, viewModel::onEmail, stringResource(R.string.profile_email), "setup_email",
                     error = state.fieldErrors["email"], keyboardType = KeyboardType.Email)
-                SetupField(state.password, viewModel::onPassword, stringResource(R.string.change_password_new), "setup_password", password = true)
-                SetupField(state.confirm, viewModel::onConfirm, stringResource(R.string.change_password_confirm), "setup_confirm", password = true,
-                    imeAction = ImeAction.Done)
-                Text(stringResource(R.string.change_password_policy), style = MaterialTheme.typography.bodySmall)
-                state.issues.forEach { Text("• $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                PasswordInput(
+                    value = state.password, onChange = viewModel::onPassword,
+                    label = stringResource(R.string.change_password_new), tag = "setup_password",
+                    show = showPassword, onToggle = { showPassword = !showPassword },
+                )
+                PasswordInput(
+                    value = state.confirm, onChange = viewModel::onConfirm,
+                    label = stringResource(R.string.change_password_confirm), tag = "setup_confirm",
+                    show = showPassword, onToggle = { showPassword = !showPassword }, imeAction = ImeAction.Done,
+                )
+                Spacer(Modifier.height(Spacing.s))
+                PasswordChecklist(state.checklist)
                 state.formError?.let {
                     Spacer(Modifier.height(Spacing.s))
                     Banner(stringResource(R.string.setup_failed), it, StatusTone.ERROR, modifier = Modifier.testTag("setup_error"))

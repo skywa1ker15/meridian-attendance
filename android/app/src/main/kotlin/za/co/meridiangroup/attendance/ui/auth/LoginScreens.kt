@@ -212,6 +212,8 @@ private fun ForgotPasswordDialog(state: LoginUiState, viewModel: LoginViewModel)
 @Composable
 fun ChangePasswordScreen(viewModel: ChangePasswordViewModel, forced: Boolean, onDone: () -> Unit, onLogout: (() -> Unit)?) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var showCurrent by rememberSaveable { mutableStateOf(false) }
+    var showNew by rememberSaveable { mutableStateOf(false) }
     if (state.done) {
         androidx.compose.runtime.LaunchedEffect(Unit) { onDone() }
     }
@@ -224,25 +226,28 @@ fun ChangePasswordScreen(viewModel: ChangePasswordViewModel, forced: Boolean, on
             stringResource(if (forced) R.string.change_password_forced else R.string.change_password_body),
             style = MaterialTheme.typography.bodyMedium,
         )
-        PasswordField(state.current, viewModel::onCurrent, stringResource(R.string.change_password_current), "pw_current")
-        PasswordField(state.new, viewModel::onNew, stringResource(R.string.change_password_new), "pw_new")
-        PasswordField(state.confirm, viewModel::onConfirm, stringResource(R.string.change_password_confirm), "pw_confirm")
-        Text(stringResource(R.string.change_password_policy), style = MaterialTheme.typography.bodySmall)
-        state.issues.forEach { Text("• $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        PasswordInput(
+            value = state.current, onChange = viewModel::onCurrent,
+            label = stringResource(R.string.change_password_current), tag = "pw_current",
+            show = showCurrent, onToggle = { showCurrent = !showCurrent },
+        )
+        PasswordInput(
+            value = state.new, onChange = viewModel::onNew,
+            label = stringResource(R.string.change_password_new), tag = "pw_new",
+            show = showNew, onToggle = { showNew = !showNew },
+        )
+        PasswordInput(
+            value = state.confirm, onChange = viewModel::onConfirm,
+            label = stringResource(R.string.change_password_confirm), tag = "pw_confirm",
+            show = showNew, onToggle = { showNew = !showNew }, imeAction = ImeAction.Done,
+        )
+        if (state.new.isNotEmpty()) {
+            PasswordChecklist(state.checklist)
+        }
         state.error?.let { Banner(stringResource(R.string.change_password_failed), it, StatusTone.ERROR) }
         PillButton(stringResource(R.string.change_password_submit), viewModel::submit, Modifier.fillMaxWidth().testTag("pw_submit"), loading = state.saving)
         if (onLogout != null) {
             TextButton(onClick = onLogout, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(stringResource(R.string.profile_logout)) }
         }
     }
-}
-
-@Composable
-private fun PasswordField(value: String, onChange: (String) -> Unit, label: String, tag: String) {
-    OutlinedTextField(
-        value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        modifier = Modifier.fillMaxWidth().testTag(tag),
-    )
 }

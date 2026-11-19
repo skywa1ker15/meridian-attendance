@@ -111,11 +111,23 @@ private fun NotificationRow(n: NotificationEntity, onClick: () -> Unit) {
     val unread = n.readAt == null
     GlassCard(onClick = onClick, contentPadding = PaddingValues(Spacing.m)) {
         Row(verticalAlignment = Alignment.Top) {
-            Box(Modifier.padding(top = 6.dp).size(8.dp).clip(CircleShape).background(if (unread) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surface))
+            Box(
+                Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape)
+                    .background(if (unread) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant),
+            )
             Column(Modifier.weight(1f).padding(start = Spacing.m)) {
-                Text(n.title, style = MaterialTheme.typography.titleSmall, fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal)
-                Text(n.body, style = MaterialTheme.typography.bodySmall)
-                Text(JohannesburgTime.relative(JohannesburgTime.parse(n.createdAt), System.currentTimeMillis()), style = MaterialTheme.typography.labelSmall, color = MeridianTheme.extended.mutedText)
+                Text(
+                    n.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
+                    color = if (unread) MaterialTheme.colorScheme.onSurface else MeridianTheme.extended.mutedText,
+                )
+                Text(n.body, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
+                Text(
+                    JohannesburgTime.relative(JohannesburgTime.parse(n.createdAt), System.currentTimeMillis()),
+                    style = MaterialTheme.typography.labelSmall, color = MeridianTheme.extended.mutedText,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
         }
     }

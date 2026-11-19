@@ -145,9 +145,9 @@ fun ProfileScreen(
             KeyValueRow(stringResource(R.string.profile_phone), PhoneNumbers.display(user?.phone) ?: "—")
             KeyValueRow(stringResource(R.string.profile_department), user?.department?.name ?: "—")
             KeyValueRow(stringResource(R.string.profile_role), StatusTones.label(user?.role))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                PillButton(stringResource(R.string.profile_edit_phone), { phoneInput = PhoneNumbers.display(user?.phone).orEmpty(); editPhone = true }, style = PillStyle.OUTLINE)
-                PillButton(stringResource(R.string.profile_request_correction), onRequestCorrection, style = PillStyle.GHOST)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                PillButton(stringResource(R.string.profile_edit_phone), { phoneInput = PhoneNumbers.display(user?.phone).orEmpty(); editPhone = true }, Modifier.fillMaxWidth(), style = PillStyle.OUTLINE)
+                PillButton(stringResource(R.string.profile_request_correction), onRequestCorrection, Modifier.fillMaxWidth(), style = PillStyle.GHOST)
             }
         }
 
@@ -169,9 +169,9 @@ fun ProfileScreen(
         SectionHeader(stringResource(R.string.profile_permissions))
         GlassCard {
             PermissionSummary(permissions)
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(top = Spacing.s)) {
-                PillButton(stringResource(R.string.profile_rerun_onboarding), onRerunOnboarding, style = PillStyle.OUTLINE)
-                PillButton(stringResource(R.string.ob_open_settings), onOpenAppSettings, style = PillStyle.GHOST)
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(top = Spacing.s)) {
+                PillButton(stringResource(R.string.profile_rerun_onboarding), onRerunOnboarding, Modifier.fillMaxWidth(), style = PillStyle.OUTLINE)
+                PillButton(stringResource(R.string.ob_open_settings), onOpenAppSettings, Modifier.fillMaxWidth(), style = PillStyle.GHOST)
             }
         }
 

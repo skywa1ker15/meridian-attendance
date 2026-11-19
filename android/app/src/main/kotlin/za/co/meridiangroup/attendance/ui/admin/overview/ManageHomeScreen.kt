@@ -168,16 +168,21 @@ fun ManageHomeScreen(viewModel: ManageHomeViewModel, permissions: List<String>, 
                         actionLabel = stringResource(R.string.action_retry), onAction = { viewModel.load(state.workDate) })
                 }
                 stats != null -> {
+                    // 2-column grid that fits comfortably on any phone width
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             StatTile(stringResource(R.string.manage_total), stats.totalEmployees.toString(), Modifier.weight(1f).testTag("tile_total"), Icons.Outlined.Groups)
                             StatTile(stringResource(R.string.today_clocked_in), stats.clockedIn.toString(), Modifier.weight(1f).testTag("tile_clocked_in"))
-                            StatTile(stringResource(R.string.manage_absent), stats.absent.toString(), Modifier.weight(1f).testTag("tile_absent"), Icons.Outlined.PersonOff)
                         }
                     }
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                            StatTile(stringResource(R.string.manage_absent), stats.absent.toString(), Modifier.weight(1f).testTag("tile_absent"), Icons.Outlined.PersonOff)
                             ClickableTile(stringResource(R.string.manage_late), stats.lateArrivals, Modifier.weight(1f), "tile_late", Icons.Outlined.Schedule, actions.onExceptions)
+                        }
+                    }
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             ClickableTile(stringResource(R.string.manage_pending_confirmations), stats.pendingConfirmations, Modifier.weight(1f), "tile_pending", Icons.AutoMirrored.Outlined.FactCheck, actions.onReview)
                             ClickableTile(stringResource(R.string.manage_under_review), stats.underReview, Modifier.weight(1f), "tile_review", null, actions.onReview)
                         }
@@ -186,7 +191,13 @@ fun ManageHomeScreen(viewModel: ManageHomeViewModel, permissions: List<String>, 
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             ClickableTile(stringResource(R.string.manage_exceptions), stats.exceptions, Modifier.weight(1f), "tile_exceptions", null, actions.onExceptions)
                             ClickableTile(stringResource(R.string.manage_pending_requests), stats.pendingRequests, Modifier.weight(1f), "tile_requests", null, actions.onReview)
-                            ClickableTile(stringResource(R.string.manage_pending_devices), stats.pendingDevices, Modifier.weight(1f), "tile_devices", null, actions.onDevices)
+                        }
+                    }
+                    if (stats.pendingDevices > 0) {
+                        item {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                                ClickableTile(stringResource(R.string.manage_pending_devices), stats.pendingDevices, Modifier.weight(1f), "tile_devices", null, actions.onDevices)
+                            }
                         }
                     }
                     val breakdown = state.overview?.departmentBreakdown.orEmpty()
