@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -65,6 +67,7 @@ import za.co.meridiangroup.attendance.ui.components.StatusChip
 import za.co.meridiangroup.attendance.ui.theme.MeridianTheme
 import za.co.meridiangroup.attendance.ui.theme.Spacing
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestsScreen(viewModel: RequestsViewModel, onNewRequest: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -77,7 +80,8 @@ fun RequestsScreen(viewModel: RequestsViewModel, onNewRequest: () -> Unit) {
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
+        PullToRefreshBox(isRefreshing = state.loading, onRefresh = viewModel::reload, modifier = Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             item { Text(stringResource(R.string.requests_title), style = MaterialTheme.typography.headlineSmall) }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
@@ -97,6 +101,7 @@ fun RequestsScreen(viewModel: RequestsViewModel, onNewRequest: () -> Unit) {
                 state.hasMore -> item { PillButton(stringResource(R.string.action_load_more), viewModel::loadMore, Modifier.fillMaxWidth(), style = PillStyle.GHOST) }
             }
         }
+        } // PullToRefreshBox
     }
     confirmCancel?.let { r ->
         AlertDialog(

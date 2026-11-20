@@ -71,7 +71,12 @@ export function render(container, { setTitle, query, navigate }) {
       emptyText: state.search || state.department_id || state.status || state.role ? 'No employees match these filters.' : 'No employees yet. Create the first employee to get started.',
       pager: { page: data.page || state.page, pageSize: data.page_size || PAGE_SIZE, total: data.total || 0, onPage: (p) => { state.page = p; load(); } },
     });
-    replace(tableHost, el('div', { style: { padding: '8px 12px 12px' } }, table));
+    const pendingCount = (data.items || []).filter((u) => u.status === 'active' && !u.last_login_at).length;
+    const pendingBanner = pendingCount > 0
+      ? el('div', { class: 'banner info', style: { margin: '8px 12px 0', padding: '8px 12px', borderRadius: '6px', background: 'var(--blue-50, #EBF0FF)', color: 'var(--blue-700, #1a3a6e)', fontSize: '13px' } },
+          `${pendingCount} employee${pendingCount > 1 ? 's have' : ' has'} not yet activated their account.`)
+      : null;
+    replace(tableHost, el('div', { style: { padding: '8px 12px 12px' } }, pendingBanner, table));
   }
   const onChanged = () => load();
   window.addEventListener('employees:changed', onChanged);

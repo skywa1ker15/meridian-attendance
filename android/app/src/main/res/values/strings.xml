@@ -699,4 +699,11 @@
     <string name="settings_device">Device</string>
     <string name="settings_android_version">Android</string>
     <string name="settings_privacy_policy">Privacy policy (POPIA)</string>
+    <string name="settings_cache_cleared">Cache cleared</string>
+
+    <!-- Biometric lock -->
+    <string name="biometric_title">Unlock Meridian Attendance</string>
+    <string name="biometric_subtitle">Use your fingerprint or face to continue</string>
+    <string name="biometric_tap_unlock">Tap to unlock</string>
+    <string name="biometric_not_available">Biometric authentication is not available on this device</string>
 </resources>

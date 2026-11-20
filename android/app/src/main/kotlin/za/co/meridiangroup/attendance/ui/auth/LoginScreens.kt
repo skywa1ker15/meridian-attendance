@@ -139,19 +139,11 @@ fun LoginScreen(viewModel: LoginViewModel, onStartSetup: (Boolean) -> Unit = {})
                 if (state.formError != null) {
                     Spacer(Modifier.height(Spacing.s))
                     Banner(
-                        title = stringResource(if (state.invitationPending) R.string.login_invitation_pending_title else R.string.login_failed),
+                        title = stringResource(R.string.login_failed),
                         message = state.formError.orEmpty(),
-                        tone = if (state.invitationPending) StatusTone.WARNING else StatusTone.ERROR,
+                        tone = StatusTone.ERROR,
                         modifier = Modifier.testTag("login_error"),
                     )
-                    if (state.invitationPending) {
-                        Spacer(Modifier.height(Spacing.s))
-                        Text(
-                            stringResource(R.string.login_invitation_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.testTag("login_invitation_hint"),
-                        )
-                    }
                 }
                 Spacer(Modifier.height(Spacing.l))
                 PillButton(

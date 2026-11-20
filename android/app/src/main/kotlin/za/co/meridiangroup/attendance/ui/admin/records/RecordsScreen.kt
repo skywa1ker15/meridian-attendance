@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material3.AlertDialog
@@ -114,6 +116,7 @@ class RecordsViewModel(private val repo: AdminRepository, now: () -> Long) : Vie
     fun clearMessage() = _state.update { it.copy(message = null) }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordsScreen(viewModel: RecordsViewModel, repo: AdminRepository, permissions: List<String>, onOpenSession: (String) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -121,6 +124,7 @@ fun RecordsScreen(viewModel: RecordsViewModel, repo: AdminRepository, permission
     var addingSession by remember { mutableStateOf(false) }
     val canReview = ServerPermissions.canReview(permissions)
 
+    PullToRefreshBox(isRefreshing = state.paged.loading, onRefresh = viewModel::reload, modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         Modifier.fillMaxSize().testTag("records_list"),
         contentPadding = PaddingValues(Spacing.l),
@@ -195,6 +199,7 @@ fun RecordsScreen(viewModel: RecordsViewModel, repo: AdminRepository, permission
             )
         }
     }
+    } // PullToRefreshBox
 
     if (pickingEmployee) {
         EmployeePickerDialog(repo, onDismiss = { pickingEmployee = false }) { user ->

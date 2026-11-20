@@ -1,6 +1,7 @@
 package za.co.meridiangroup.attendance.ui.settings
 
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,13 +47,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -64,6 +70,7 @@ import za.co.meridiangroup.attendance.AppGraph
 import za.co.meridiangroup.attendance.BuildConfig
 import za.co.meridiangroup.attendance.R
 import za.co.meridiangroup.attendance.core.ServerUrls
+import za.co.meridiangroup.attendance.ui.auth.canUseBiometrics
 import za.co.meridiangroup.attendance.ui.components.GlassCard
 import za.co.meridiangroup.attendance.ui.components.SectionHeader
 import za.co.meridiangroup.attendance.ui.theme.Spacing
@@ -106,6 +113,8 @@ fun AppSettingsScreen(viewModel: AppSettingsViewModel) {
     val showLocation by viewModel.showLocation.collectAsStateWithLifecycle()
     val offlineMode by viewModel.offlineMode.collectAsStateWithLifecycle()
     val user by viewModel.user.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
 
@@ -169,7 +178,13 @@ fun AppSettingsScreen(viewModel: AppSettingsViewModel) {
         // ---- Privacy & Security ----
         SectionHeader(stringResource(R.string.settings_privacy_security))
         GlassCard {
-            SettingToggle(stringResource(R.string.settings_biometric_lock), stringResource(R.string.settings_biometric_lock_desc), Icons.Outlined.Fingerprint, biometricLock, viewModel::setBiometricLock)
+            SettingToggle(stringResource(R.string.settings_biometric_lock), stringResource(R.string.settings_biometric_lock_desc), Icons.Outlined.Fingerprint, biometricLock) { enable ->
+                if (enable && !canUseBiometrics(context)) {
+                    Toast.makeText(context, context.getString(R.string.biometric_not_available), Toast.LENGTH_SHORT).show()
+                } else {
+                    viewModel.setBiometricLock(enable)
+                }
+            }
             Spacer(Modifier.height(Spacing.s))
 
             AutoLockDropdown(autoLockTimeout, viewModel::setAutoLockTimeout)
@@ -229,7 +244,15 @@ fun AppSettingsScreen(viewModel: AppSettingsViewModel) {
             onDismissRequest = { showClearCacheDialog = false },
             title = { Text(stringResource(R.string.settings_clear_cache)) },
             text = { Text(stringResource(R.string.settings_clear_cache_confirm)) },
-            confirmButton = { TextButton(onClick = { showClearCacheDialog = false }) { Text(stringResource(R.string.action_ok)) } },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearCacheDialog = false
+                    scope.launch {
+                        withContext(Dispatchers.IO) { context.cacheDir.deleteRecursively() }
+                        Toast.makeText(context, context.getString(R.string.settings_cache_cleared), Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text(stringResource(R.string.action_ok)) }
+            },
             dismissButton = { TextButton(onClick = { showClearCacheDialog = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }

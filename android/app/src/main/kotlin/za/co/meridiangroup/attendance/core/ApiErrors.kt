@@ -44,7 +44,7 @@ object ApiErrorMapper {
     private val logoutCodes = setOf("token_reused", "token_invalid", "device_revoked", "account_inactive")
 
     /** Login-time codes that say something about the account, not about this device's session. */
-    private val sessionlessCodes = setOf("invalid_credentials", "token_expired", "invitation_pending")
+    private val sessionlessCodes = setOf("invalid_credentials", "token_expired")
 
     /**
      * Codes that mean the device must drop its session and show the login screen.
@@ -68,8 +68,6 @@ object ApiErrorMapper {
             "device_revoked" -> "This device has been revoked. Please sign in again or contact an administrator."
             "device_pending_approval" -> "This device is waiting for administrator approval."
             "password_change_required" -> "You must change your password before continuing."
-            "invitation_pending" ->
-                "You haven't set a password yet. Open the invitation link we emailed you to finish setting up your account."
             "token_invalid" ->
                 if (failure.httpStatus == 400) "That link is no longer valid. Ask your manager to send a new one."
                 else "Your session has expired. Please sign in again."

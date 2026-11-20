@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.AlertDialog
@@ -138,6 +140,7 @@ class EmployeesViewModel(private val repo: AdminRepository) : ViewModel() {
     fun clearMessage() = _state.update { it.copy(paged = it.paged.copy(message = null), createError = null) }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, onOpenEmployee: (String) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -145,6 +148,7 @@ fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, on
     val canWrite = ServerPermissions.canWriteEmployees(permissions)
     val departmentOptions = listOf("" to stringResource(R.string.filter_all_departments)) + state.departments.map { it.id to it.name }
 
+    PullToRefreshBox(isRefreshing = state.paged.loading, onRefresh = viewModel::reload, modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         Modifier.fillMaxSize().testTag("employees_list"),
         contentPadding = PaddingValues(Spacing.l),
@@ -201,6 +205,7 @@ fun EmployeesScreen(viewModel: EmployeesViewModel, permissions: List<String>, on
             )
         }
     }
+    } // PullToRefreshBox
 
     if (showCreate) {
         CreateEmployeeDialog(

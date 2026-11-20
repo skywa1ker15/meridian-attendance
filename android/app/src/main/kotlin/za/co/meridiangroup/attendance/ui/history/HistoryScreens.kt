@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
@@ -53,9 +55,11 @@ import za.co.meridiangroup.attendance.ui.dashboard.SessionRow
 import za.co.meridiangroup.attendance.ui.theme.MeridianTheme
 import za.co.meridiangroup.attendance.ui.theme.Spacing
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(viewModel: HistoryViewModel, onOpenSession: (String) -> Unit, onRequestCorrection: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    PullToRefreshBox(isRefreshing = state.loading, onRefresh = viewModel::reload, modifier = Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize().testTag("history"), contentPadding = PaddingValues(Spacing.l), verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
         item { Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineSmall) }
         item {
@@ -91,6 +95,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onOpenSession: (String) -> Unit, 
             state.hasMore -> item { PillButton(stringResource(R.string.action_load_more), viewModel::loadMore, Modifier.fillMaxWidth(), style = PillStyle.GHOST) }
         }
     }
+    } // PullToRefreshBox
 }
 
 @Composable
