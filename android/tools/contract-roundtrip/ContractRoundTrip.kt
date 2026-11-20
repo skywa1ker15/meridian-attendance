@@ -225,12 +225,12 @@ private fun invitationFlow(suffix: String) {
         println("       -> invitation sent=${inv.sent} link=${if (inv.link.isNullOrBlank()) "none" else "present"}")
     }
 
-    // The app's login screen maps this code onto "finish setting up your account".
+    // Login before activation returns the same generic error as an unknown user (prevents enumeration).
     token = null
     val (pendingCode, pendingBody) = call("POST", "/auth/login", enc(LoginRequestDto(number, "Whatever-Pass-2026", null)))
     val pendingError = runCatching { json.decodeFromString(ErrorEnvelopeDto.serializer(), pendingBody).error.code }.getOrNull()
-    if (pendingCode == 401 && pendingError == "invitation_pending") {
-        passed++; println("  ok   login before activation -> 401 invitation_pending")
+    if (pendingCode == 401 && pendingError == "invalid_credentials") {
+        passed++; println("  ok   login before activation -> 401 invalid_credentials (no enumeration)")
     } else {
         failures += "login before activation: $pendingCode $pendingError"
     }
